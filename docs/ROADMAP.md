@@ -4,6 +4,7 @@
 
 - [ ] **Developer ID signing + notarization** – removes the Gatekeeper warning and keeps Full Disk Access
       across updates (ad-hoc signatures change on every build).
+- [ ] **UI polish pass** – works, but looks plain; give it a proper visual design before the public release.
 - [ ] **Screenshots / short GIF** for the README.
 - [ ] **GitHub Actions**: build the DMG on tag push and attach it to a release.
 - [ ] **Onboarding flow** – a first-run assistant instead of pointing new users at Settings.
