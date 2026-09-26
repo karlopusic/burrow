@@ -5,7 +5,6 @@ struct SettingsView: View {
     @EnvironmentObject var model: AppModel
     @State private var draft = AppConfig()
     @State private var time = Date()
-    @State private var password = ""
 
     var body: some View {
         Form {
@@ -66,39 +65,26 @@ struct SettingsView: View {
 
     private var connectionSection: some View {
         Section {
-            TextField("Server", text: $draft.host, prompt: Text(verbatim: "u123456.your-storagebox.de"))
-            TextField("Username", text: $draft.user, prompt: Text(verbatim: "u123456"))
-            TextField("Port", value: $draft.port, format: .number.grouping(.never))
-            LabeledContent("SSH key") { Text(verbatim: draft.keyFile).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle) }
+            let usable = model.bookmarks.filter { $0.auth == .key }
+            Picker("Server", selection: Binding(
+                get: { draft.backupBookmarkID },
+                set: { id in if let b = model.bookmarks.first(where: { $0.id == id }) { draft.use(b) } })) {
+                Text("Choose…").tag(UUID?.none)
+                ForEach(usable) { b in Text(b.displayName).tag(UUID?.some(b.id)) }
+            }
+            if usable.isEmpty {
+                Text("Add a server with SSH key authentication under Servers in the sidebar first.")
+                    .font(.caption).foregroundStyle(.secondary)
+            } else {
+                Text("Backups run unattended, so only servers that use an SSH key are listed. Edit connection details under Servers.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             HStack {
                 Button("Test connection") { model.testConnection(current) }.disabled(!draft.isConnectionConfigured)
                 if let c = model.connection { Text(c).foregroundStyle(.secondary).lineLimit(2) }
             }
-            DisclosureGroup("First-time setup: install SSH key") {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Enter your Storage Box password once. The app creates its own SSH key, adds it to the box, and from then on logs in with the key only – the password is not stored.")
-                        .font(.caption).foregroundStyle(.secondary)
-                    Text("In Hetzner Console the box must have “SSH support” enabled.")
-                        .font(.caption).foregroundStyle(.secondary)
-                    HStack {
-                        SecureField("Storage Box password", text: $password)
-                        Button("Install key") {
-                            model.installKey(host: draft.host, port: draft.port, user: draft.user,
-                                             password: password, keyFile: draft.keyFile)
-                            password = ""
-                        }
-                        .disabled(password.isEmpty || !draft.isConnectionConfigured || model.keySetupBusy)
-                    }
-                    if model.keySetupBusy { ProgressView().controlSize(.small) }
-                    if let r = model.keySetupResult {
-                        Label(r.message, systemImage: r.ok ? "checkmark.circle.fill" : "xmark.octagon.fill")
-                            .foregroundStyle(r.ok ? .green : .orange)
-                    }
-                }
-                .padding(.top, 4)
-            }
         } header: {
-            Text("Storage Box connection")
+            Text("Backup destination")
         }
     }
 

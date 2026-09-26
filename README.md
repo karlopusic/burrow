@@ -5,7 +5,7 @@
 <h1 align="center">StorageBox Sync</h1>
 
 <p align="center">
-  A native macOS app that keeps a folder safely backed up to a <a href="https://www.hetzner.com/storage/storage-box/">Hetzner Storage Box</a> — on a schedule, with version history, and without ever deleting anything silently.
+  A native macOS app for your <a href="https://www.hetzner.com/storage/storage-box/">Hetzner Storage Box</a> and other SFTP servers: a Cyberduck-style file browser, plus scheduled backups with version history — without ever deleting anything silently.
 </p>
 
 <p align="center">
@@ -31,6 +31,22 @@ questions that matter: *When was my last good backup? What changed? Can I get th
 
 ## Features
 
+### File browser
+
+- **Bookmarks** for any number of SFTP servers (Storage Box, your own VPS, client servers) – SSH key or
+  password (stored in the macOS Keychain).
+- **Browse** in list or icon view, sort by name/date/size/kind, path bar, back/forward, hidden files toggle,
+  **recursive search**.
+- **Quick Look** any remote file with the space bar.
+- **Drag & drop upload** of files and whole folders from Finder; **download** to Downloads or any folder.
+- **Transfer queue** with live progress, speed and ETA, pause/resume, cancel, retry and history.
+- **File management**: new folder, rename, duplicate, cut/copy/paste, Get Info (incl. folder size), copy path.
+- **Safe delete**: "Move to Trash" moves items into a dated trash folder on the server, and **Put Back**
+  restores them to where they were. Uploading over an existing file offers *Keep Both*, *Replace* (the old
+  copy goes to the trash) or *Skip*. Permanent deletion only happens inside the trash, after confirmation.
+
+### Backup
+
 - **Scheduled backups** via a LaunchAgent – daily or weekly, runs even when the app is closed, catches
   up after sleep.
 - **Version history** – files you change or delete locally are moved into a dated archive folder on the
@@ -51,6 +67,13 @@ questions that matter: *When was my last good backup? What changed? Can I get th
 
 ## How it works
 
+The browser talks to a local `rclone rcd` process started by the app: it listens on `127.0.0.1` only, on a
+random port with random per-session credentials, keeps SFTP connections open (so folders open quickly)
+and runs uploads/downloads as jobs with live statistics. Servers are passed to rclone as in-memory
+connection strings, so saved passwords never touch disk.
+
+Backups:
+
 ```
 ~/Desktop/Projects  ──rclone sync──▶  box:/home/Projects            (exact mirror)
                                    └▶ box:/home/_versions/2026-09-26_2100/…
@@ -67,6 +90,8 @@ All state lives in:
 | One log file per run | `~/Library/Logs/StorageBox Sync/` |
 | Schedule | `~/Library/LaunchAgents/hr.push.storageboxsync.plist` |
 | SSH key | `~/.ssh/storageboxsync_ed25519` |
+| Server bookmarks, transfer history | `~/Library/Application Support/StorageBox Sync/` |
+| Server trash | `<login folder>/.sbs-trash/<date>/…` (configurable per server) |
 
 ## Install
 

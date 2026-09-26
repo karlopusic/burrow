@@ -11,6 +11,7 @@ struct AppConfig: Codable, Equatable {
     var port = 23                       // Hetzner Storage Box: 23 = SSH/SFTP with extended commands
     var user = ""                       // e.g. u123456
     var keyFile = Paths.defaultKey
+    var backupBookmarkID: UUID?         // bookmark whose connection the backup uses
 
     // What goes where
     var localPath = ""
@@ -40,6 +41,7 @@ struct AppConfig: Codable, Equatable {
         port = try c.decodeIfPresent(Int.self, forKey: .port) ?? d.port
         user = try c.decodeIfPresent(String.self, forKey: .user) ?? d.user
         keyFile = try c.decodeIfPresent(String.self, forKey: .keyFile) ?? d.keyFile
+        backupBookmarkID = try c.decodeIfPresent(UUID.self, forKey: .backupBookmarkID)
         localPath = try c.decodeIfPresent(String.self, forKey: .localPath) ?? d.localPath
         remotePath = try c.decodeIfPresent(String.self, forKey: .remotePath) ?? d.remotePath
         versionsPath = try c.decodeIfPresent(String.self, forKey: .versionsPath) ?? d.versionsPath
@@ -64,6 +66,11 @@ struct AppConfig: Codable, Equatable {
         let enc = JSONEncoder(); enc.outputFormatting = [.prettyPrinted, .sortedKeys]
         if let d = try? enc.encode(self) { try? d.write(to: URL(fileURLWithPath: Paths.config), options: .atomic) }
         writeRcloneConfig()
+    }
+
+    mutating func use(_ b: Bookmark) {
+        backupBookmarkID = b.id
+        host = b.host; port = b.port; user = b.user; keyFile = b.keyFile
     }
 
     var isConnectionConfigured: Bool { !host.isEmpty && !user.isEmpty }

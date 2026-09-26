@@ -31,6 +31,8 @@ final class AppModel: ObservableObject {
     @Published var keySetupBusy = false
     @Published var keySetupResult: KeySetup.Outcome?
     @Published var migration: LegacyMigration.State = .none
+    @Published var bookmarks: [Bookmark] = []
+    private var browsers: [UUID: BrowserModel] = [:]
 
     private var timer: Timer?
     private var pendingAgentInstall = false
@@ -40,6 +42,11 @@ final class AppModel: ObservableObject {
         migration = LegacyMigration.runIfNeeded()
         cfg = AppConfig.load()
         if cfg.isConnectionConfigured { cfg.writeRcloneConfig() }
+        loadBookmarks()
+        Task.detached { try? RcloneDaemon.shared.startIfNeeded() }
+        NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in
+            RcloneDaemon.shared.stop()
+        }
         reload()
         installAgentWhenIdle()
         checkLocalAccess()
@@ -126,6 +133,55 @@ final class AppModel: ObservableObject {
     func openLocalFolder() { NSWorkspace.shared.open(URL(fileURLWithPath: cfg.localPath)) }
     func openFullDiskAccess() {
         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!)
+    }
+
+    // MARK: bookmarks
+
+    private func loadBookmarks() {
+        bookmarks = BookmarkStore.load()
+        // First run after the upgrade: turn the backup connection into the first bookmark.
+        if bookmarks.isEmpty && cfg.isConnectionConfigured {
+            var b = Bookmark()
+            b.name = cfg.host.hasSuffix("your-storagebox.de") ? "Storage Box" : cfg.host
+            b.host = cfg.host; b.port = cfg.port; b.user = cfg.user; b.keyFile = cfg.keyFile
+            bookmarks = [b]
+            BookmarkStore.save(bookmarks)
+            cfg.use(b); cfg.save()
+        }
+    }
+
+    func browser(for b: Bookmark) -> BrowserModel {
+        if let m = browsers[b.id] { return m }
+        let m = BrowserModel(bookmark: b)
+        browsers[b.id] = m
+        return m
+    }
+
+    func saveBookmark(_ b: Bookmark) {
+        if let i = bookmarks.firstIndex(where: { $0.id == b.id }) { bookmarks[i] = b } else { bookmarks.append(b) }
+        BookmarkStore.save(bookmarks)
+        browsers[b.id] = nil                         // reconnect with the new settings
+        if cfg.backupBookmarkID == b.id {
+            var c = cfg; c.use(b); saveConfig(c)
+        }
+    }
+
+    func deleteBookmark(_ b: Bookmark) {
+        bookmarks.removeAll { $0.id == b.id }
+        BookmarkStore.save(bookmarks)
+        Keychain.delete(b.id)
+        browsers[b.id] = nil
+        if cfg.backupBookmarkID == b.id { cfg.backupBookmarkID = nil; cfg.save() }
+    }
+
+    func testBookmark(_ b: Bookmark) async -> String {
+        do {
+            let fs = try await RcloneDaemon.shared.fsBase(b)
+            let r = try await RcloneDaemon.shared.call("operations/list", ["fs": fs, "remote": b.path.hasPrefix("/") ? "" : b.path])
+            return L("Connection works ✓ (%ld items)", (r["list"] as? [Any])?.count ?? 0)
+        } catch {
+            return L("Connection failed: %@", error.localizedDescription)
+        }
     }
 
     // MARK: remote queries
@@ -230,6 +286,13 @@ enum Fmt {
         f.unitsStyle = .abbreviated; f.allowedUnits = [.hour, .minute, .second]; f.maximumUnitCount = 2
         var cal = Calendar.current; cal.locale = locale; f.calendar = cal
         return f.string(from: b.timeIntervalSince(a)) ?? "—"
+    }
+    static func remaining(_ seconds: Double) -> String? {
+        let f = DateComponentsFormatter()
+        f.unitsStyle = .abbreviated; f.allowedUnits = [.hour, .minute, .second]; f.maximumUnitCount = 2
+        f.includesTimeRemainingPhrase = true
+        var cal = Calendar.current; cal.locale = locale; f.calendar = cal
+        return f.string(from: seconds)
     }
     static var weekdays: [String] {
         var cal = Calendar.current; cal.locale = locale

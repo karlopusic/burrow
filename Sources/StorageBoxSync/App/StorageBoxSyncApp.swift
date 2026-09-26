@@ -8,6 +8,11 @@ enum Entry {
         if args.contains("--run") || args.contains("--dry-run") {
             exit(Runner.main(args: args))
         }
+        if let i = args.firstIndex(of: "--selftest") {
+            let rest = Array(args[(i + 1)...])
+            Task { @MainActor in exit(await SelfTest.run(rest)) }
+            RunLoop.main.run()   // timers (transfer polling) need a running main run loop
+        }
         StorageBoxSyncApp.main()
     }
 }

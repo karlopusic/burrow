@@ -12,6 +12,8 @@ import Darwin
 enum Runner {
     /// rclone uploads to "<name>.<8 hex>.partial" and renames when done; a killed run can leave these behind.
     static let partialGlob = "*.[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f].partial"
+    /// Lock/temp files of open documents (InDesign, Office, LibreOffice): they vanish mid-run and are never worth keeping.
+    static let builtinExcludes = [partialGlob, "*.idlk", "~$*", ".~lock.*#"]
 
     static func main(args: [String]) -> Int32 {
         Paths.ensure()
@@ -67,7 +69,7 @@ enum Runner {
         guard fm.fileExists(atPath: cfg.localPath, isDirectory: &isDir), isDir.boolValue else {
             return finish(.error, L("Local folder not found: %@", cfg.localPath))
         }
-        let count = countFiles(cfg.localPath, excludes: cfg.excludes)
+        let count = countFiles(cfg.localPath, excludes: cfg.excludes + builtinExcludes)
         rec.localFiles = count
         guard count >= 0 else { return finish(.error, L("No access to the local folder. Grant Full Disk Access.")) }
         guard count > 0 else { return finish(.blocked, L("The local folder is empty – backup blocked.")) }
@@ -84,7 +86,7 @@ enum Runner {
                  "--checkers", "8", "--transfers", "4",
                  "--retries", "3", "--low-level-retries", "10",
                  "--stats", "5s", "--log-level", "INFO", "--log-file", logFile]
-        for x in cfg.excludes + [partialGlob] { a += ["--exclude", x] }
+        for x in cfg.excludes + builtinExcludes { a += ["--exclude", x] }
         if dryRun { a.append("--dry-run") }
 
         let p = Process()

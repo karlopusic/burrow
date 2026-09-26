@@ -7,10 +7,16 @@
 - [ ] **Screenshots / short GIF** for the README.
 - [ ] **GitHub Actions**: build the DMG on tag push and attach it to a release.
 - [ ] **Onboarding flow** – a first-run assistant instead of pointing new users at Settings.
-- [ ] **Stop test** – confirm SIGTERM mid-upload leaves no partial files on the box.
+- [x] **Stop test** – interrupted uploads leave no partial files (backup + browser, covered by `--selftest`).
 - [ ] **Host-key fingerprint confirmation** during SSH key setup (currently trust-on-first-use).
 
 ## Next
+
+- [ ] **Edit in external app** – open a remote file in Photoshop/InDesign/…, re-upload on every save.
+- [ ] Drag files from the browser straight into Finder (file promises); today: Download / Download to….
+- [ ] Get Info: Unix permissions and owner, with chmod.
+- [ ] Resume interrupted single-file uploads (currently a paused file restarts from zero).
+- [ ] Multiple browser tabs/windows per server.
 
 - [ ] Multiple backup jobs (several local folders → several remote folders).
 - [ ] Bandwidth limit and "only on power adapter / only on Wi-Fi X" options.
