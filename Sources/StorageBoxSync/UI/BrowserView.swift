@@ -135,7 +135,7 @@ struct BrowserView: View {
 
     private var statusBar: some View {
         HStack(spacing: 8) {
-            if model.loading || model.busy != nil || model.searching || model.pendingOps > 0 { ProgressView().controlSize(.small) }
+            if model.loading || model.refreshing || model.busy != nil || model.searching || model.pendingOps > 0 { ProgressView().controlSize(.small) }
             if let b = model.busy { Text(b) }
             else if model.searching { Text("Searching…") }
             else if let r = model.searchResults { Text("\(r.count) results") }
@@ -158,7 +158,9 @@ struct BrowserView: View {
     // MARK: content
 
     @ViewBuilder private var content: some View {
-        if model.visibleItems.isEmpty && !model.loading {
+        if model.loading && model.visibleItems.isEmpty {
+            VStack { Spacer(); ProgressView(); Spacer() }.frame(maxWidth: .infinity)
+        } else if model.visibleItems.isEmpty {
             VStack(spacing: 8) {
                 Spacer()
                 Image(systemName: model.searchResults != nil ? "magnifyingglass" : "tray").font(.largeTitle).foregroundStyle(.tertiary)

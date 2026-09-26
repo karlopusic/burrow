@@ -15,6 +15,7 @@ Sources/StorageBoxSync/
           RcloneDaemon.swift        long-running `rclone rcd` + JSON API client used by the browser
           Transfers.swift           transfer queue (async rclone jobs, progress polling, pause/cancel)
           Bookmark.swift            server bookmarks, Keychain passwords, remote path helpers
+          DirCache.swift            bounded per-server cache of folder listings (memory LRU + ~/Library/Caches)
           SelfTest.swift            `--selftest`: end-to-end test of browser + transfers on a real server
           Shell.swift, Paths.swift  process helpers, file locations, L() localization helper
   UI/     AppModel.swift            observable state + actions for the views
@@ -38,7 +39,7 @@ Xcode. With Xcode installed, the current SDK is used.
 
 ## Self-test (browser + transfers)
 
-Runs 27 checks against a real SFTP server inside a random `_sbs_selftest_<n>` folder that it creates and
+Runs 30 checks against a real SFTP server inside a random `_sbs_selftest_<n>` folder that it creates and
 removes again (uploads, conflicts, rename, move, trash / put back, Quick Look, downloads, cancel cleanup):
 
 ```sh

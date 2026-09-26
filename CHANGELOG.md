@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.1 – 2026-09-26
+
+Faster browsing.
+
+- Folder listings are cached (LRU: 1,500 folders in memory, the 400 most recent on disk) and shown instantly,
+  then refreshed in the background (stale-while-revalidate)
+- Subfolders of the current folder are prefetched (3 at a time, up to 40), so opening them is instant
+- SFTP connections stay open for 30 minutes instead of 60 seconds (a reconnect costs several seconds)
+- Servers are connected and the last visited folder is restored at launch
+- File icons and kinds are looked up once per extension
+- Conflict checks (rename, move, upload) always use a fresh listing, never the cache
+
 ## 0.2.0 – 2026-09-26
 
 File browser for SFTP servers, in the spirit of Cyberduck.

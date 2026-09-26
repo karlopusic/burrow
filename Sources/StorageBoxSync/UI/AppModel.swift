@@ -45,8 +45,10 @@ final class AppModel: ObservableObject {
         loadBookmarks()
         Task.detached { try? RcloneDaemon.shared.startIfNeeded() }
         NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { DirCache.saveAll() }
             RcloneDaemon.shared.stop()
         }
+        warmUp()
         reload()
         installAgentWhenIdle()
         checkLocalAccess()
@@ -150,6 +152,15 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Opens the SSH connection and loads the last folder of the first few servers right at launch,
+    /// so the first click in the browser doesn't wait for the handshake.
+    private func warmUp() {
+        for b in bookmarks.prefix(5) where b.isComplete {
+            let m = browser(for: b)
+            Task { await m.connect() }
+        }
+    }
+
     func browser(for b: Bookmark) -> BrowserModel {
         if let m = browsers[b.id] { return m }
         let m = BrowserModel(bookmark: b)
@@ -161,6 +172,7 @@ final class AppModel: ObservableObject {
         if let i = bookmarks.firstIndex(where: { $0.id == b.id }) { bookmarks[i] = b } else { bookmarks.append(b) }
         BookmarkStore.save(bookmarks)
         browsers[b.id] = nil                         // reconnect with the new settings
+        DirCache.discard(b.id)                       // listings may belong to another server/account now
         if cfg.backupBookmarkID == b.id {
             var c = cfg; c.use(b); saveConfig(c)
         }
@@ -171,6 +183,8 @@ final class AppModel: ObservableObject {
         BookmarkStore.save(bookmarks)
         Keychain.delete(b.id)
         browsers[b.id] = nil
+        DirCache.discard(b.id)
+        UserDefaults.standard.removeObject(forKey: "lastPath.\(b.id.uuidString)")
         if cfg.backupBookmarkID == b.id { cfg.backupBookmarkID = nil; cfg.save() }
     }
 

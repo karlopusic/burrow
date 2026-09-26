@@ -69,7 +69,9 @@ questions that matter: *When was my last good backup? What changed? Can I get th
 
 The browser talks to a local `rclone rcd` process started by the app: it listens on `127.0.0.1` only, on a
 random port with random per-session credentials, keeps SFTP connections open (so folders open quickly)
-and runs uploads/downloads as jobs with live statistics. Servers are passed to rclone as in-memory
+and runs uploads/downloads as jobs with live statistics. Folder listings are cached (bounded LRU, persisted
+in `~/Library/Caches`) and refreshed in the background, and subfolders are prefetched, so navigation is instant
+even on a slow connection; anything that could overwrite data re-checks the server first. Servers are passed to rclone as in-memory
 connection strings, so saved passwords never touch disk.
 
 Backups:

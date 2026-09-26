@@ -3,7 +3,7 @@ import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 
-struct RemoteItem: Identifiable, Hashable {
+struct RemoteItem: Identifiable, Hashable, Codable {
     var id: String { path }
     let path: String          // relative to the browser's fs root
     let name: String
@@ -11,15 +11,24 @@ struct RemoteItem: Identifiable, Hashable {
     let modified: Date?
     let isDir: Bool
 
-    var kind: String {
-        if isDir { return L("Folder") }
-        let ext = (name as NSString).pathExtension
-        return UTType(filenameExtension: ext)?.localizedDescription ?? ext.uppercased()
+    private var ext: String { isDir ? "/" : (name as NSString).pathExtension.lowercased() }
+
+    // Icons and kind names are looked up once per extension – large folders render without hitting LaunchServices per row.
+    @MainActor private static var icons: [String: NSImage] = [:]
+    @MainActor private static var kinds: [String: String] = [:]
+
+    @MainActor var kind: String {
+        if let k = Self.kinds[ext] { return k }
+        let k = isDir ? L("Folder") : (UTType(filenameExtension: ext)?.localizedDescription ?? ext.uppercased())
+        Self.kinds[ext] = k
+        return k
     }
-    var icon: NSImage {
-        if isDir { return NSWorkspace.shared.icon(for: .folder) }
-        let t = UTType(filenameExtension: (name as NSString).pathExtension) ?? .data
-        return NSWorkspace.shared.icon(for: t)
+    @MainActor var icon: NSImage {
+        if let i = Self.icons[ext] { return i }
+        let i = isDir ? NSWorkspace.shared.icon(for: .folder)
+                      : NSWorkspace.shared.icon(for: UTType(filenameExtension: ext) ?? .data)
+        Self.icons[ext] = i
+        return i
     }
 }
 
@@ -43,6 +52,12 @@ final class BrowserModel: ObservableObject {
     @Published var clipboard: (items: [RemoteItem], cut: Bool)?
     /// Operations still preparing work (conflict checks, moving replaced items to trash) before they queue transfers.
     @Published var pendingOps = 0
+    /// A cached listing is shown while the fresh one loads.
+    @Published var refreshing = false
+
+    private let cache: DirCache
+    private var prefetchTask: Task<Void, Never>?
+    private var lastPathKey: String { "lastPath.\(bookmark.id.uuidString)" }
 
     private var back: [String] = []
     private var forward: [String] = []
@@ -54,12 +69,16 @@ final class BrowserModel: ObservableObject {
 
     init(bookmark: Bookmark) {
         self.bookmark = bookmark
-        self.cwd = bookmark.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        self.cache = DirCache.forBookmark(bookmark.id)
+        let start = bookmark.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        self.cwd = UserDefaults.standard.string(forKey: "lastPath.\(bookmark.id.uuidString)") ?? start
+        if let cached = cache.get(cwd) { items = cached.items }   // instant first paint, even before connecting
         observer = NotificationCenter.default.addObserver(forName: .remoteChanged, object: nil, queue: .main) { [weak self] n in
             guard let key = n.object as? String else { return }
             Task { @MainActor in
-                guard let self, !self.fsRoot.isEmpty else { return }
-                if key == self.refreshKey(self.cwd) { await self.reload() }
+                guard let self, !self.fsRoot.isEmpty, key.hasPrefix(self.fsRoot + "|") else { return }
+                let dir = String(key.dropFirst(self.fsRoot.count + 1))
+                if dir == self.cwd { await self.reload() } else { self.cache.markStale(dir) }
             }
         }
     }
@@ -100,7 +119,7 @@ final class BrowserModel: ObservableObject {
         guard fsRoot.isEmpty else { return }
         do {
             fsRoot = try await RcloneDaemon.shared.fsBase(bookmark) + (absolute ? "/" : "")
-            await reload()
+            show(cwd)
         } catch {
             self.error = error.localizedDescription
         }
@@ -109,28 +128,82 @@ final class BrowserModel: ObservableObject {
     func open(_ path: String) {
         guard path != cwd else { return }
         back.append(cwd); forward.removeAll()
-        cwd = path
-        clearSearch()
-        Task { await reload() }
+        navigate(to: path)
     }
 
-    func goBack() { guard let p = back.popLast() else { return }; forward.append(cwd); cwd = p; clearSearch(); Task { await reload() } }
-    func goForward() { guard let p = forward.popLast() else { return }; back.append(cwd); cwd = p; clearSearch(); Task { await reload() } }
+    func goBack() { guard let p = back.popLast() else { return }; forward.append(cwd); navigate(to: p) }
+    func goForward() { guard let p = forward.popLast() else { return }; back.append(cwd); navigate(to: p) }
+
+    private func navigate(to path: String) {
+        cwd = path
+        clearSearch()
+        UserDefaults.standard.set(path, forKey: lastPathKey)
+        show(path)
+    }
+
+    /// Cached listing → shown immediately and refreshed in the background. Unknown folder → spinner.
+    private func show(_ dir: String) {
+        error = nil
+        if let cached = cache.get(dir) {
+            items = cached.items
+            loading = false
+            refreshing = true
+        } else {
+            items = []
+            loading = true
+        }
+        Task { await fetchCurrent(dir, keepError: false) }
+    }
     func goUp() { if canGoUp { open(RPath.parent(cwd)) } }
     func openTrash() { open(trashPath) }
 
-    /// `keepError`: refresh after an operation must not hide the error that operation just reported.
+    /// Fresh listing of the current folder. `keepError`: a refresh after an operation must not hide its error.
     func reload(keepError: Bool = false) async {
         guard !fsRoot.isEmpty else { await connect(); return }
-        loading = true
+        if items.isEmpty { loading = true } else { refreshing = true }
+        await fetchCurrent(cwd, keepError: keepError)
+    }
+
+    private func fetchCurrent(_ dir: String, keepError: Bool) async {
+        guard !fsRoot.isEmpty else { return }
         if !keepError { error = nil }
-        defer { loading = false }
         do {
-            items = try await list(cwd)
+            let fresh = try await list(dir)
+            guard dir == cwd else { return }          // user navigated on meanwhile; the cache got it anyway
+            if fresh != items { items = fresh }
             if inTrash { await prepareTrashFolder() }
+            prefetchChildren(of: fresh)
         } catch {
-            items = []
+            guard dir == cwd else { return }
+            if cache.get(dir) == nil { items = [] }
             self.error = (error as? RcloneError)?.message ?? error.localizedDescription
+        }
+        if dir == cwd { loading = false; refreshing = false }
+    }
+
+    /// Loads the visible subfolders in the background (3 at a time, up to 40) so opening them is instant.
+    private func prefetchChildren(of list: [RemoteItem]) {
+        prefetchTask?.cancel()
+        let targets = list.filter { $0.isDir && (showHidden || !$0.name.hasPrefix(".")) }
+            .map(\.path)
+            .filter { (cache.age($0) ?? .infinity) > 120 }
+            .prefix(40)
+        guard !targets.isEmpty else { return }
+        let queue = Array(targets)
+        prefetchTask = Task { [weak self] in
+            var next = 0
+            await withTaskGroup(of: Void.self) { group in
+                func add() {
+                    guard next < queue.count else { return }
+                    let dir = queue[next]; next += 1
+                    group.addTask { _ = try? await self?.list(dir) }
+                }
+                for _ in 0..<3 { add() }
+                for await _ in group {
+                    if Task.isCancelled { group.cancelAll(); break }
+                    add()
+                }
+            }
         }
     }
 
@@ -154,9 +227,12 @@ final class BrowserModel: ObservableObject {
         .sorted { a, b in a.isDir != b.isDir ? a.isDir : a.name.localizedStandardCompare(b.name) == .orderedAscending }
     }
 
+    /// Always asks the server; every result also refreshes the cache.
     func list(_ dir: String) async throws -> [RemoteItem] {
         let r = try await RcloneDaemon.shared.call("operations/list", ["fs": fsRoot, "remote": dir])
-        return parse(r["list"] as? [[String: Any]] ?? [], base: dir)
+        let items = parse(r["list"] as? [[String: Any]] ?? [], base: dir)
+        cache.put(dir, items)
+        return items
     }
 
     // MARK: search
@@ -203,6 +279,10 @@ final class BrowserModel: ObservableObject {
         // SFTP rename needs the target's parent folder to exist (e.g. a new dated trash folder)
         let parent = RPath.parent(dest)
         if !parent.isEmpty { _ = try await RcloneDaemon.shared.call("operations/mkdir", ["fs": fsRoot, "remote": parent]) }
+        defer {
+            cache.markStale(RPath.parent(item.path)); cache.markStale(parent)
+            if item.isDir { cache.removeTree(item.path) }
+        }
         if item.isDir {
             _ = try await RcloneDaemon.shared.call("sync/move", ["srcFs": fs(item.path), "dstFs": fs(dest), "deleteEmptySrcDirs": true])
             // sync/move leaves the (now empty) source folder itself behind
@@ -213,8 +293,9 @@ final class BrowserModel: ObservableObject {
         }
     }
 
+    /// Conflict checks never trust the cache: a stale listing could let a move overwrite a file.
     private func names(in dir: String) async throws -> Set<String> {
-        dir == cwd ? Set(items.map(\.name)) : Set(try await list(dir).map(\.name))
+        Set(try await list(dir).map(\.name))
     }
 
     func newFolder(_ name: String) {
@@ -223,6 +304,7 @@ final class BrowserModel: ObservableObject {
         run(L("Creating folder…")) { [self] in
             guard !(try await names(in: cwd)).contains(n) else { throw RcloneError(message: L("“%@” already exists.", n)) }
             _ = try await RcloneDaemon.shared.call("operations/mkdir", ["fs": fsRoot, "remote": RPath.join(cwd, n)])
+            cache.markStale(cwd)
         }
     }
 
@@ -285,6 +367,7 @@ final class BrowserModel: ObservableObject {
             "srcFs": "/", "srcRemote": String(tmp.path.dropFirst()),
             "dstFs": fsRoot, "dstRemote": RPath.join(stampDir, ".origins.json")])
         origins[stampDir] = map
+        cache.markStale(stampDir)
     }
 
     private func isStampFolder(_ item: RemoteItem) -> Bool { item.isDir && RPath.parent(item.path) == trashPath }
@@ -324,6 +407,7 @@ final class BrowserModel: ObservableObject {
                 if map.isEmpty {
                     _ = try? await RcloneDaemon.shared.call("operations/purge", ["fs": fsRoot, "remote": stampDir])
                     origins[stampDir] = nil
+                    cache.removeTree(stampDir); cache.markStale(trashPath)
                 } else {
                     try await writeOrigins(map, to: stampDir)
                 }
@@ -335,11 +419,7 @@ final class BrowserModel: ObservableObject {
     func deletePermanently(_ selection: [RemoteItem]) {
         run(L("Deleting…")) { [self] in
             for item in selection where item.path.hasPrefix(trashPath + "/") {
-                if item.isDir {
-                    _ = try await RcloneDaemon.shared.call("operations/purge", ["fs": fsRoot, "remote": item.path])
-                } else {
-                    _ = try await RcloneDaemon.shared.call("operations/deletefile", ["fs": fsRoot, "remote": item.path])
-                }
+                try await removeForGood(item)
             }
         }
     }
@@ -347,13 +427,19 @@ final class BrowserModel: ObservableObject {
     func emptyTrash() {
         run(L("Emptying trash…")) { [self] in
             for item in try await list(trashPath) {
-                if item.isDir {
-                    _ = try await RcloneDaemon.shared.call("operations/purge", ["fs": fsRoot, "remote": item.path])
-                } else {
-                    _ = try await RcloneDaemon.shared.call("operations/deletefile", ["fs": fsRoot, "remote": item.path])
-                }
+                try await removeForGood(item)
             }
         }
+    }
+
+    private func removeForGood(_ item: RemoteItem) async throws {
+        if item.isDir {
+            _ = try await RcloneDaemon.shared.call("operations/purge", ["fs": fsRoot, "remote": item.path])
+            cache.removeTree(item.path)
+        } else {
+            _ = try await RcloneDaemon.shared.call("operations/deletefile", ["fs": fsRoot, "remote": item.path])
+        }
+        cache.markStale(RPath.parent(item.path))
     }
 
     func copy(_ selection: [RemoteItem]) { clipboard = (selection, false) }
@@ -444,7 +530,7 @@ final class BrowserModel: ObservableObject {
                     case .skip: continue
                     case .keepBoth: name = RPath.uniqueName(name, taken: taken)
                     case .replace:
-                        let existing = (dest == cwd ? items : (try? await list(dest)) ?? []).first { $0.name == name }
+                        let existing = ((try? await list(dest)) ?? []).first { $0.name == name }
                         if let existing {
                             do {
                                 try await trash([existing])

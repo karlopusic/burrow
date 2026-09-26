@@ -25,7 +25,7 @@ enum SelfTest {
     static func waitIdle(_ m: BrowserModel, timeout: Double = 120) async {
         let end = Date().addingTimeInterval(timeout)
         try? await Task.sleep(nanoseconds: 200_000_000)
-        while (m.busy != nil || m.loading || m.pendingOps > 0) && Date() < end { try? await Task.sleep(nanoseconds: 200_000_000) }
+        while (m.busy != nil || m.loading || m.refreshing || m.pendingOps > 0) && Date() < end { try? await Task.sleep(nanoseconds: 200_000_000) }
     }
 
     static func waitTransfers(timeout: Double = 300) async {
@@ -168,6 +168,27 @@ enum SelfTest {
         await waitTransfers()
         check(FileManager.default.fileExists(atPath: dl.path + "/Renamed Folder/Folder A/Sub/deep.txt"), "download folder")
 
+        // cache: prefetched subfolder and "Back" open instantly; outside changes appear after the background refresh
+        m.open(root); await waitIdle(m)
+        try? await Task.sleep(nanoseconds: 4_000_000_000)          // let prefetch of subfolders finish
+        let sub = root + "/Renamed Folder"
+        let t0 = Date()
+        m.open(sub)
+        let instant = !m.items.isEmpty && !m.loading
+        check(instant && Date().timeIntervalSince(t0) < 0.05, "prefetched subfolder opens instantly from cache")
+        await waitIdle(m)
+        m.goBack()
+        check(!m.items.isEmpty && !m.loading, "back is instant from cache")
+        await waitIdle(m)
+        if let base = try? await RcloneDaemon.shared.fsBase(b) {   // change made "by someone else"
+            _ = try? await RcloneDaemon.shared.call("operations/mkdir", ["fs": base, "remote": sub + "/External"])
+        }
+        m.open(sub)
+        let staleFirst = !m.items.contains { $0.name == "External" }
+        await waitIdle(m)
+        check(staleFirst && m.items.contains { $0.name == "External" }, "background refresh picks up outside changes")
+        m.open(root); await waitIdle(m)
+
         // cancelled upload leaves no partial file
         let big = local.appendingPathComponent("big.bin")
         FileManager.default.createFile(atPath: big.path, contents: Data(count: 300 * 1024 * 1024))
@@ -186,6 +207,8 @@ enum SelfTest {
         if let base = try? await RcloneDaemon.shared.fsBase(b) {
             _ = try? await RcloneDaemon.shared.call("operations/purge", ["fs": base, "remote": root])
         }
+        DirCache.discard(b.id)
+        UserDefaults.standard.removeObject(forKey: "lastPath.\(b.id.uuidString)")
         RcloneDaemon.shared.stop()
         print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")
         return failures == 0 ? 0 : 1
