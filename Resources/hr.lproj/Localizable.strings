@@ -1,0 +1,145 @@
+/* StorageBox Sync – Croatian. Keys are the English source strings. */
+
+/* Menu bar */
+"Stop" = "Zaustavi";
+"Last backup: %@" = "Zadnji backup: %@";
+"Back up now" = "Backup sada";
+"No successful backup yet" = "Još nema uspješnog backupa";
+"Open %@" = "Otvori %@";
+"Quit" = "Izlaz";
+"Preview in progress…" = "Pregled promjena u tijeku…";
+"Backup in progress…" = "Backup u tijeku…";
+
+/* Tabs */
+"Overview" = "Pregled";
+"Versions" = "Verzije";
+"Settings" = "Postavke";
+
+/* Banners */
+"Finish setup" = "Dovrši postavljanje";
+"Enter your Storage Box connection and choose the folder to back up." = "Unesi podatke za Storage Box i odaberi folder koji želiš backupirati.";
+"Open Settings" = "Otvori postavke";
+"Waiting for the previous app" = "Čekam prethodnu aplikaciju";
+"A backup started by SIM Backup is still running. Settings will be imported automatically once it finishes – reopen this app then." = "Backup koji je pokrenuo SIM Backup još traje. Postavke će se automatski preuzeti kad završi – tada ponovno otvori ovu aplikaciju.";
+"No access to the local folder" = "Nema pristupa lokalnom folderu";
+"Add StorageBox Sync in System Settings → Privacy & Security → Full Disk Access, then reopen the app. Scheduled backups can't read protected folders like Desktop without it." = "Dodaj StorageBox Sync u System Settings → Privacy & Security → Full Disk Access, pa ponovno otvori aplikaciju. Bez toga zakazani backup ne može čitati zaštićene foldere poput Desktopa.";
+"Open Full Disk Access" = "Otvori Full Disk Access";
+"Check again" = "Provjeri ponovno";
+
+/* Overview */
+"Last successful backup: %@" = "Zadnji uspješan backup: %@";
+"Next scheduled run: %@" = "Sljedeći automatski: %@";
+"Scheduled backups are off" = "Automatski backup je isključen";
+"Storage Box: %@ of %@ used" = "Storage Box: %@ od %@ zauzeto";
+"Data" = "Prijenos";
+"Files" = "Datoteke";
+"Checked" = "Provjereno";
+"Elapsed" = "Trajanje";
+"Open log" = "Otvori log";
+"Preview changes" = "Pregled promjena";
+"Run anyway" = "Pokreni ipak";
+"Open local folder" = "Otvori lokalni folder";
+"Open logs folder" = "Otvori folder s logovima";
+"Last preview · %@" = "Zadnji pregled promjena · %@";
+"To upload: %lld · To archive: %lld · Date fixes: %lld" = "Za upload: %lld · U arhivu: %lld · Ispravak datuma: %lld";
+"Show list" = "Prikaži popis";
+"History" = "Povijest";
+"No runs yet." = "Još nema pokretanja.";
+"preview" = "pregled";
+"scheduled" = "raspored";
+"manual" = "ručno";
+
+/* Preview sheet */
+"Preview · %@" = "Pregled promjena · %@";
+"Close" = "Zatvori";
+"“upload” = new or changed file goes to the box. “archive” = the old copy on the box moves to the versions folder – nothing is deleted." = "„upload“ = nova ili izmijenjena datoteka ide na box. „arhiva“ = stara kopija na boxu seli se u folder verzija – ništa se ne briše.";
+"All (%lld)" = "Sve (%lld)";
+"Upload (%lld)" = "Upload (%lld)";
+"Archive (%lld)" = "Arhiva (%lld)";
+"Search…" = "Traži…";
+"Type" = "Vrsta";
+"Path" = "Putanja";
+"Size" = "Veličina";
+"upload" = "upload";
+"archive" = "arhiva";
+
+/* Versions */
+"Version archive" = "Arhiva verzija";
+"No archived versions yet. When you change or delete a file, the previous copy is kept here for %lld days." = "Još nema arhiviranih verzija. Kad izmijeniš ili obrišeš datoteku, prethodna kopija se ovdje čuva %lld dana.";
+"Previous versions from %@" = "Stare verzije iz backupa %@";
+"Restore selected" = "Vrati odabranu";
+"Restore all" = "Vrati sve";
+"Restores go to ~/Downloads/StorageBox Sync Restore/ – your working folder is never touched." = "Vraćanje ide u ~/Downloads/StorageBox Sync Restore/ – tvoj radni folder se nikad ne dira.";
+"File" = "Datoteka";
+"Modified" = "Izmijenjeno";
+"Select a version on the left" = "Odaberi verziju lijevo";
+
+/* Settings */
+"Storage Box connection" = "Veza sa Storage Boxom";
+"Server" = "Server";
+"Username" = "Korisnik";
+"Port" = "Port";
+"SSH key" = "SSH ključ";
+"Test connection" = "Testiraj vezu";
+"First-time setup: install SSH key" = "Prvo postavljanje: instaliraj SSH ključ";
+"Enter your Storage Box password once. The app creates its own SSH key, adds it to the box, and from then on logs in with the key only – the password is not stored." = "Jednom unesi lozinku Storage Boxa. Aplikacija napravi vlastiti SSH ključ, doda ga na box i od tada se spaja samo ključem – lozinka se ne sprema.";
+"In Hetzner Console the box must have “SSH support” enabled." = "U Hetzner Consoleu box mora imati uključen „SSH support“.";
+"Storage Box password" = "Lozinka Storage Boxa";
+"Install key" = "Instaliraj ključ";
+"Folders" = "Folderi";
+"Local folder" = "Lokalni folder";
+"Choose…" = "Odaberi…";
+"Folder on the Storage Box" = "Folder na Storage Boxu";
+"Versions folder on the Storage Box" = "Folder za verzije na Storage Boxu";
+"The box folder becomes an exact mirror of the local folder. Files you change or delete locally are moved to the versions folder instead of being overwritten." = "Folder na boxu postaje točna kopija lokalnog foldera. Datoteke koje lokalno izmijeniš ili obrišeš sele se u folder verzija umjesto da budu prepisane.";
+"Schedule" = "Raspored";
+"Automatic backup" = "Automatski backup";
+"Frequency" = "Učestalost";
+"Every day" = "Svaki dan";
+"Once a week" = "Jednom tjedno";
+"Day" = "Dan";
+"Time" = "Vrijeme";
+"If the Mac is off or asleep at that time, the backup runs as soon as it wakes up." = "Ako je Mac u to vrijeme ugašen ili spava, backup se pokreće čim se probudi.";
+"Versions & safety" = "Verzije i sigurnost";
+"Keep old versions for %lld days" = "Čuvaj stare verzije %lld dana";
+"Stop if a run would archive more than %lld files" = "Zaustavi ako bi se arhiviralo više od %lld datoteka";
+"If more than 20 percent of local files disappear between backups, the run is blocked until you confirm it manually." = "Ako između dva backupa lokalno nestane više od 20 posto datoteka, backup se blokira dok ga ručno ne potvrdiš.";
+"Permissions" = "Dozvole";
+"Local folder is readable ✓" = "Pristup lokalnom folderu ✓";
+"Revert" = "Vrati";
+"Save" = "Spremi";
+
+/* Model / runner messages */
+"Could not start: %@" = "Ne mogu pokrenuti: %@";
+"Settings saved." = "Postavke spremljene.";
+"Checking…" = "Provjeravam…";
+"Connection works ✓" = "Veza radi ✓";
+"Connection failed: %@" = "Veza ne radi: %@";
+"Restoring…" = "Vraćam…";
+"Restored to Downloads/%@" = "Vraćeno u Downloads/%@";
+"Restore failed: %@" = "Vraćanje nije uspjelo: %@";
+"Skipped" = "Preskočeno";
+"A backup is already running." = "Backup je već u tijeku.";
+"Preview finished" = "Pregled promjena gotov";
+"To upload: %ld, to archive: %ld" = "Za upload: %ld, u arhivu: %ld";
+"Backup finished" = "Backup gotov";
+"Uploaded: %ld, archived: %ld" = "Uploadano: %ld, arhivirano: %ld";
+"Stopped" = "Zaustavljeno";
+"Preview failed" = "Pregled promjena nije uspio";
+"Backup failed" = "Backup NIJE uspio";
+"Setup is not complete. Open Settings." = "Postavljanje nije dovršeno. Otvori postavke.";
+"Local folder not found: %@" = "Lokalni folder ne postoji: %@";
+"No access to the local folder. Grant Full Disk Access." = "Nema pristupa lokalnom folderu. Daj aplikaciji Full Disk Access.";
+"The local folder is empty – backup blocked." = "Lokalni folder je prazan – backup blokiran.";
+"The local folder has %ld files, last time it had %ld. Backup blocked for safety – use “Run anyway” if this is intended." = "Lokalno je %ld datoteka, a zadnji put %ld. Backup je blokiran radi sigurnosti – ako je to namjerno, klikni „Pokreni ipak“.";
+"Could not start rclone: %@" = "Ne mogu pokrenuti rclone: %@";
+"Stopped by user. The next run continues where this one left off." = "Zaustavljeno ručno. Sljedeće pokretanje nastavlja gdje je ovo stalo.";
+"Errors (%ld): %@" = "Greške (%ld): %@";
+"Preview finished." = "Pregled promjena gotov.";
+"Backup successful." = "Backup uspješan.";
+"Could not reach %@ on port %ld." = "Ne mogu dohvatiti %@ na portu %ld.";
+"Could not create SSH key: %@" = "Ne mogu napraviti SSH ključ: %@";
+"Public key %@ is missing." = "Nedostaje javni ključ %@.";
+"Login failed: %@" = "Prijava nije uspjela: %@";
+"Could not upload the key: %@" = "Ne mogu uploadati ključ: %@";
+"SSH key installed. The password is no longer needed." = "SSH ključ je instaliran. Lozinka više nije potrebna.";

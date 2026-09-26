@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key><string>__BUNDLE_ID__</string>
+  <key>CFBundleName</key><string>StorageBox Sync</string>
+  <key>CFBundleDisplayName</key><string>StorageBox Sync</string>
+  <key>CFBundleExecutable</key><string>__EXE__</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>__VERSION__</string>
+  <key>CFBundleVersion</key><string>__VERSION__</string>
+  <key>CFBundleDevelopmentRegion</key><string>en</string>
+  <key>CFBundleLocalizations</key><array><string>en</string><string>hr</string></array>
+  <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSDesktopFolderUsageDescription</key><string>StorageBox Sync reads the folder you chose so it can back it up to your Storage Box.</string>
+  <key>NSDocumentsFolderUsageDescription</key><string>StorageBox Sync reads the folder you chose so it can back it up to your Storage Box.</string>
+  <key>NSHumanReadableCopyright</key><string>© 2026 Karlo Pušić · MIT License</string>
+</dict>
+</plist>

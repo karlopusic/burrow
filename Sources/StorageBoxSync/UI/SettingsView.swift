@@ -1,0 +1,125 @@
+import SwiftUI
+import AppKit
+
+struct SettingsView: View {
+    @EnvironmentObject var model: AppModel
+    @State private var draft = AppConfig()
+    @State private var time = Date()
+    @State private var password = ""
+
+    var body: some View {
+        Form {
+            connectionSection
+            Section("Folders") {
+                HStack {
+                    Text("Local folder")
+                    Spacer()
+                    Text(verbatim: draft.localPath.isEmpty ? "—" : draft.localPath)
+                        .foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                    Button("Choose…") { pickFolder() }
+                }
+                TextField("Folder on the Storage Box", text: $draft.remotePath, prompt: Text(verbatim: "/home/Projects"))
+                TextField("Versions folder on the Storage Box", text: $draft.versionsPath, prompt: Text(verbatim: "/home/_versions"))
+                Text("The box folder becomes an exact mirror of the local folder. Files you change or delete locally are moved to the versions folder instead of being overwritten.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Schedule") {
+                Toggle("Automatic backup", isOn: $draft.scheduleEnabled)
+                Picker("Frequency", selection: $draft.frequency) {
+                    Text("Every day").tag(Frequency.daily)
+                    Text("Once a week").tag(Frequency.weekly)
+                }.disabled(!draft.scheduleEnabled)
+                if draft.frequency == .weekly {
+                    Picker("Day", selection: $draft.weekday) {
+                        ForEach(1...7, id: \.self) { Text(Fmt.weekdays[$0 - 1].capitalized).tag($0) }
+                    }.disabled(!draft.scheduleEnabled)
+                }
+                DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
+                    .disabled(!draft.scheduleEnabled)
+                Text("If the Mac is off or asleep at that time, the backup runs as soon as it wakes up.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Versions & safety") {
+                Stepper("Keep old versions for \(draft.retentionDays) days", value: $draft.retentionDays, in: 7...365, step: 7)
+                Stepper("Stop if a run would archive more than \(draft.maxDelete) files", value: $draft.maxDelete, in: 50...5000, step: 50)
+                Text("If more than 20 percent of local files disappear between backups, the run is blocked until you confirm it manually.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Permissions") {
+                HStack {
+                    Button("Open Full Disk Access") { model.openFullDiskAccess() }
+                    (model.localAccess ? Text("Local folder is readable ✓") : Text("No access to the local folder"))
+                        .foregroundStyle(model.localAccess ? Color.secondary : Color.orange)
+                }
+            }
+            HStack {
+                Text(verbatim: "\(AppInfo.name) \(AppInfo.version)").font(.caption).foregroundStyle(.tertiary)
+                Spacer()
+                Button("Revert") { load() }.disabled(current == model.cfg)
+                Button("Save") { model.saveConfig(current) }
+                    .buttonStyle(.borderedProminent).disabled(current == model.cfg)
+            }
+        }
+        .formStyle(.grouped)
+        .onAppear { load() }
+    }
+
+    private var connectionSection: some View {
+        Section {
+            TextField("Server", text: $draft.host, prompt: Text(verbatim: "u123456.your-storagebox.de"))
+            TextField("Username", text: $draft.user, prompt: Text(verbatim: "u123456"))
+            TextField("Port", value: $draft.port, format: .number.grouping(.never))
+            LabeledContent("SSH key") { Text(verbatim: draft.keyFile).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle) }
+            HStack {
+                Button("Test connection") { model.testConnection(current) }.disabled(!draft.isConnectionConfigured)
+                if let c = model.connection { Text(c).foregroundStyle(.secondary).lineLimit(2) }
+            }
+            DisclosureGroup("First-time setup: install SSH key") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Enter your Storage Box password once. The app creates its own SSH key, adds it to the box, and from then on logs in with the key only – the password is not stored.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Text("In Hetzner Console the box must have “SSH support” enabled.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    HStack {
+                        SecureField("Storage Box password", text: $password)
+                        Button("Install key") {
+                            model.installKey(host: draft.host, port: draft.port, user: draft.user,
+                                             password: password, keyFile: draft.keyFile)
+                            password = ""
+                        }
+                        .disabled(password.isEmpty || !draft.isConnectionConfigured || model.keySetupBusy)
+                    }
+                    if model.keySetupBusy { ProgressView().controlSize(.small) }
+                    if let r = model.keySetupResult {
+                        Label(r.message, systemImage: r.ok ? "checkmark.circle.fill" : "xmark.octagon.fill")
+                            .foregroundStyle(r.ok ? .green : .orange)
+                    }
+                }
+                .padding(.top, 4)
+            }
+        } header: {
+            Text("Storage Box connection")
+        }
+    }
+
+    private var current: AppConfig {
+        var c = draft
+        let comps = Calendar.current.dateComponents([.hour, .minute], from: time)
+        c.hour = comps.hour ?? 21; c.minute = comps.minute ?? 0
+        c.host = c.host.trimmingCharacters(in: .whitespaces)
+        c.user = c.user.trimmingCharacters(in: .whitespaces)
+        return c
+    }
+
+    private func load() {
+        draft = model.cfg
+        time = Calendar.current.date(bySettingHour: draft.hour, minute: draft.minute, second: 0, of: Date()) ?? Date()
+    }
+
+    private func pickFolder() {
+        let p = NSOpenPanel()
+        p.canChooseDirectories = true; p.canChooseFiles = false; p.allowsMultipleSelection = false
+        if !draft.localPath.isEmpty { p.directoryURL = URL(fileURLWithPath: draft.localPath) }
+        if p.runModal() == .OK, let u = p.url { draft.localPath = u.path }
+    }
+}
