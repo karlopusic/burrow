@@ -8,15 +8,16 @@ enum Frequency: String, Codable, CaseIterable, Identifiable {
 struct AppConfig: Codable, Equatable {
     // Connection
     var host = ""                       // e.g. u123456.your-storagebox.de
-    var port = 23                       // Hetzner Storage Box: 23 = SSH/SFTP with extended commands
+    var port = 22                       // Standard SFTP; the Hetzner preset uses port 23
     var user = ""                       // e.g. u123456
     var keyFile = Paths.defaultKey
     var backupBookmarkID: UUID?         // bookmark whose connection the backup uses
+    var remoteShell = false              // opt in for hosts that permit SSH shell commands
 
     // What goes where
     var localPath = ""
     var remotePath = ""                 // e.g. /home/Projects
-    var versionsPath = "/home/_versions"
+    var versionsPath = "_versions"
 
     // Schedule
     var scheduleEnabled = true
@@ -42,6 +43,8 @@ struct AppConfig: Codable, Equatable {
         user = try c.decodeIfPresent(String.self, forKey: .user) ?? d.user
         keyFile = try c.decodeIfPresent(String.self, forKey: .keyFile) ?? d.keyFile
         backupBookmarkID = try c.decodeIfPresent(UUID.self, forKey: .backupBookmarkID)
+        remoteShell = try c.decodeIfPresent(Bool.self, forKey: .remoteShell)
+            ?? host.hasSuffix(".your-storagebox.de")
         localPath = try c.decodeIfPresent(String.self, forKey: .localPath) ?? d.localPath
         remotePath = try c.decodeIfPresent(String.self, forKey: .remotePath) ?? d.remotePath
         versionsPath = try c.decodeIfPresent(String.self, forKey: .versionsPath) ?? d.versionsPath
@@ -71,17 +74,44 @@ struct AppConfig: Codable, Equatable {
     mutating func use(_ b: Bookmark) {
         backupBookmarkID = b.id
         host = b.host; port = b.port; user = b.user; keyFile = b.keyFile
+        remoteShell = b.usesRemoteShell
     }
 
     var isConnectionConfigured: Bool { !host.isEmpty && !user.isEmpty }
-    var isComplete: Bool { isConnectionConfigured && !localPath.isEmpty && !remotePath.isEmpty }
+    var isComplete: Bool {
+        isConnectionConfigured && !localPath.isEmpty && !remotePath.isEmpty
+            && !versionsPath.isEmpty && folderProblem == nil
+    }
+
+    /// Folder choices that would make a backup dangerous or impossible; nil when they're fine.
+    var folderProblem: String? {
+        func norm(_ p: String) -> String {
+            let t = p.trimmingCharacters(in: .whitespaces)
+            return t.count > 1 && t.hasSuffix("/") ? String(t.dropLast()) : t
+        }
+        let remote = norm(remotePath), versions = norm(versionsPath)
+        if remote.isEmpty || versions.isEmpty { return nil }            // incomplete, not wrong
+        if [remote, versions].contains(where: { path in
+            path.split(separator: "/").contains { $0 == "." || $0 == ".." }
+        }) { return L("Folder paths cannot contain dot or parent-directory segments.") }
+        if ["/", "/home", ".", "~"].contains(remote) {
+            return L("Choose a dedicated backup subfolder on the server. The server root cannot be a backup folder.")
+        }
+        if ["/", "/home", ".", "~"].contains(versions) {
+            return L("Choose a dedicated versions subfolder on the server.")
+        }
+        if remote == versions || versions.hasPrefix(remote + "/") || remote.hasPrefix(versions + "/") {
+            return L("The versions folder must be outside the backup folder.")
+        }
+        return nil
+    }
 
     var remote: String { "\(AppInfo.remoteName):\(remotePath)" }
     var versionsRemote: String { "\(AppInfo.remoteName):\(versionsPath)" }
 
     /// rclone.conf is derived state – regenerated from config.json so the two can never drift apart.
     func writeRcloneConfig() {
-        let conf = """
+        var conf = """
         [\(AppInfo.remoteName)]
         type = sftp
         host = \(host)
@@ -89,11 +119,10 @@ struct AppConfig: Codable, Equatable {
         user = \(user)
         key_file = \(keyFile)
         known_hosts_file = \(Paths.knownHosts)
-        shell_type = unix
-        md5sum_command = md5sum
-        sha1sum_command = sha1sum
+        shell_type = \(remoteShell ? "unix" : "none")
 
         """
+        if remoteShell { conf += "md5sum_command = md5sum\nsha1sum_command = sha1sum\n" }
         FileManager.default.createFile(atPath: Paths.rcloneConf, contents: Data(conf.utf8),
                                        attributes: [.posixPermissions: 0o600])
     }

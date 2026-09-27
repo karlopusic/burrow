@@ -4,7 +4,12 @@ import AppKit
 @main
 enum Entry {
     static func main() {
+        AppLanguage.apply()
         let args = CommandLine.arguments
+        if args.contains("--version") {
+            print(AppInfo.version)
+            return
+        }
         if args.contains("--run") || args.contains("--dry-run") {
             exit(Runner.main(args: args))
         }
@@ -19,32 +24,28 @@ enum Entry {
 
 struct StorageBoxSyncApp: App {
     @StateObject private var model = AppModel()
+    @StateObject private var updater = UpdateController()
 
     var body: some Scene {
         Window(AppInfo.name, id: "main") {
-            MainView().environmentObject(model)
+            MainView().environmentObject(model).environmentObject(updater)
                 .frame(minWidth: 840, minHeight: 620)
         }
         .windowResizability(.contentMinSize)
 
         MenuBarExtra {
-            MenuContent().environmentObject(model)
+            MenuContent().environmentObject(model).environmentObject(updater)
         } label: {
             Image(systemName: menuIcon)
         }
     }
 
-    private var menuIcon: String {
-        if model.isRunning { return "arrow.triangle.2.circlepath.icloud" }
-        switch model.status.lastBackup?.result {
-        case .ok?, nil: return "externaldrive.badge.checkmark"
-        default: return "externaldrive.badge.exclamationmark"
-        }
-    }
+    private var menuIcon: String { BackupState(model).menuBarIcon }
 }
 
 struct MenuContent: View {
     @EnvironmentObject var model: AppModel
+    @EnvironmentObject var updater: UpdateController
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -52,14 +53,20 @@ struct MenuContent: View {
             (model.status.running?.dryRun == true ? Text("Preview in progress…") : Text("Backup in progress…"))
             if let p = model.progress, !p.bytesLine.isEmpty { Text(p.bytesLine) }
             Button("Stop") { model.stop() }
-        } else if let e = model.status.lastSuccess?.end {
-            Text("Last backup: \(Fmt.relative.localizedString(for: e, relativeTo: Date()))")
-            Button("Back up now") { model.startBackup() }
         } else {
-            Text("No successful backup yet")
+            if let e = model.status.lastSuccess?.end {
+                Text("Last backup: \(Fmt.relative.localizedString(for: e, relativeTo: Date()))")
+            } else {
+                Text("No successful backup yet")
+            }
+            if let n = model.cfg.nextRun(), model.cfg.isComplete {
+                Text("Next backup: \(Fmt.dayTime.string(from: n))")
+            }
             Button("Back up now") { model.startBackup() }.disabled(model.needsSetup)
+            Button("Preview changes") { model.startDryRun() }.disabled(model.needsSetup)
         }
         Divider()
+        Button("Check for Updates…") { updater.checkForUpdates() }
         Button("Open \(AppInfo.name)") {
             openWindow(id: "main")
             NSApp.activate(ignoringOtherApps: true)

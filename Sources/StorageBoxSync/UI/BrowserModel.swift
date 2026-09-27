@@ -499,12 +499,16 @@ final class BrowserModel: ObservableObject {
 
     func download(_ selection: [RemoteItem], to folder: URL) {
         let fm = FileManager.default
+        var taken = Set((try? fm.contentsOfDirectory(atPath: folder.path)) ?? [])
+        for transfer in TransferManager.shared.items where transfer.isActive || transfer.state == .paused {
+            guard let destination = transfer.localDestination,
+                  RPath.parent(destination) == folder.path else { continue }
+            taken.insert(URL(fileURLWithPath: destination).lastPathComponent)
+        }
         for item in selection {
-            var target = folder.appendingPathComponent(item.name)
-            if fm.fileExists(atPath: target.path) {
-                let taken = Set((try? fm.contentsOfDirectory(atPath: folder.path)) ?? [])
-                target = folder.appendingPathComponent(RPath.uniqueName(item.name, taken: taken))
-            }
+            let name = RPath.uniqueName(item.name, taken: taken)
+            taken.insert(name)
+            let target = folder.appendingPathComponent(name)
             let local = String(target.path.dropFirst())  // relative to local fs root "/"
             let t = Transfer(kind: .download, name: item.name, server: bookmark.displayName, isDir: item.isDir,
                              srcFs: item.isDir ? fs(item.path) : fsRoot, srcRemote: item.isDir ? nil : item.path,

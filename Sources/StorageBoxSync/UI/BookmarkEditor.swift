@@ -10,6 +10,7 @@ struct BookmarkEditor: View {
     @State private var testResult: String?
     @State private var testing = false
     @State private var keyPassword = ""
+    @StateObject private var verifier = HostVerifier()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -21,6 +22,8 @@ struct BookmarkEditor: View {
                     TextField("Username", text: $bookmark.user)
                     Text("Hetzner Storage Box: server uXXXXXX.your-storagebox.de, port 23, username uXXXXXX.")
                         .font(.caption).foregroundStyle(.secondary)
+                    Toggle("Allow remote shell commands for checksums", isOn: Binding(
+                        get: { bookmark.usesRemoteShell }, set: { bookmark.remoteShell = $0 }))
                 }
                 Section("Authentication") {
                     Picker("Method", selection: $bookmark.auth) {
@@ -41,13 +44,9 @@ struct BookmarkEditor: View {
                                     .font(.caption).foregroundStyle(.secondary)
                                 HStack {
                                     SecureField("Account password", text: $keyPassword)
-                                    Button("Install key") {
-                                        if !FileManager.default.fileExists(atPath: bookmark.keyFile) { bookmark.keyFile = Paths.defaultKey }
-                                        model.installKey(host: bookmark.host, port: bookmark.port, user: bookmark.user,
-                                                         password: keyPassword, keyFile: bookmark.keyFile)
-                                        keyPassword = ""
-                                    }
-                                    .disabled(keyPassword.isEmpty || bookmark.host.isEmpty || bookmark.user.isEmpty || model.keySetupBusy)
+                                    Button("Install key") { installKey() }
+                                        .disabled(keyPassword.isEmpty || bookmark.host.isEmpty || bookmark.user.isEmpty
+                                                  || model.keySetupBusy || verifier.checking)
                                 }
                                 if model.keySetupBusy { ProgressView().controlSize(.small) }
                                 if let r = model.keySetupResult {
@@ -74,9 +73,13 @@ struct BookmarkEditor: View {
             .formStyle(.grouped)
             Divider()
             HStack {
-                Button("Test Connection") { test() }.disabled(!bookmark.isComplete || testing)
-                if testing { ProgressView().controlSize(.small) }
-                if let r = testResult { Text(r).font(.callout).foregroundStyle(.secondary).lineLimit(2) }
+                Button("Test Connection") { test() }.disabled(!bookmark.isComplete || testing || verifier.checking)
+                if testing || verifier.checking { ProgressView().controlSize(.small) }
+                if let f = verifier.failure {
+                    Label(f, systemImage: "exclamationmark.triangle.fill").font(.callout).foregroundStyle(.orange).lineLimit(2)
+                } else if let r = testResult {
+                    Text(r).font(.callout).foregroundStyle(.secondary).lineLimit(2)
+                }
                 Spacer()
                 Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
                 Button(isNew ? "Add" : "Save") { save() }
@@ -87,6 +90,7 @@ struct BookmarkEditor: View {
         }
         .frame(width: 520, height: 620)
         .onAppear { model.keySetupResult = nil }
+        .hostKeyVerification(verifier)
     }
 
     private func save() {
@@ -95,9 +99,22 @@ struct BookmarkEditor: View {
         dismiss()
     }
 
+    private func installKey() {
+        if !FileManager.default.fileExists(atPath: bookmark.keyFile) { bookmark.keyFile = Paths.defaultKey }
+        let b = bookmark, pw = keyPassword
+        keyPassword = ""
+        verifier.ensureTrusted(host: b.host, port: b.port) {
+            model.installKey(host: b.host, port: b.port, user: b.user, password: pw, keyFile: b.keyFile)
+        }
+    }
+
     private func test() {
-        testing = true
         testResult = nil
+        verifier.ensureTrusted(host: bookmark.host, port: bookmark.port) { runTest() }
+    }
+
+    private func runTest() {
+        testing = true
         var b = bookmark
         if b.auth == .password && !password.isEmpty {
             // test with the typed password without saving it yet

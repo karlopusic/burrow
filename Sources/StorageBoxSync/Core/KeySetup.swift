@@ -10,19 +10,9 @@ enum KeySetup {
         let fm = FileManager.default
         Paths.ensure()
 
-        // 1. Trust the host key (TOFU) so rclone can verify the server from now on.
-        let hostEntry = port == 22 ? host : "[\(host)]:\(port)"
-        if runCapture("/usr/bin/ssh-keygen", ["-F", hostEntry, "-f", Paths.knownHosts]).code != 0 {
-            let scan = runCapture("/usr/bin/ssh-keyscan", ["-p", String(port), "-t", "ed25519,rsa", host])
-            guard scan.code == 0, !scan.out.isEmpty else {
-                return Outcome(ok: false, message: L("Could not reach %@ on port %ld.", host, port))
-            }
-            if let h = FileHandle(forWritingAtPath: Paths.knownHosts) ?? {
-                fm.createFile(atPath: Paths.knownHosts, contents: nil, attributes: [.posixPermissions: 0o600])
-                return FileHandle(forWritingAtPath: Paths.knownHosts)
-            }() {
-                h.seekToEndOfFile(); h.write(Data(scan.out.utf8)); try? h.close()
-            }
+        // 1. The host key must already be trusted – the UI shows its fingerprint first (HostKeys).
+        guard HostKeys.isKnown(host: host, port: port) else {
+            return Outcome(ok: false, message: L("The server's identity has not been confirmed yet."))
         }
 
         // 2. Dedicated key without passphrase (needed for unattended runs).

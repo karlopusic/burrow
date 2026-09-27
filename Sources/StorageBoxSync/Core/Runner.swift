@@ -25,7 +25,8 @@ enum Runner {
         let force = fm.fileExists(atPath: Paths.forceFlag)
         try? fm.removeItem(atPath: Paths.stopFlag)
 
-        let stamp = stampFormatter.string(from: Date())
+        // A unique folder per run: two manual/scheduled runs may start in the same minute.
+        let stamp = stampFormatter.string(from: Date()) + "-" + String(UUID().uuidString.prefix(8))
         let logFile = Paths.logs + "/\(stamp)\(dryRun ? "_preview" : "").log"
         var rec = RunRecord(dryRun: dryRun, trigger: trigger, start: Date(), result: .running, logFile: logFile)
 
@@ -62,6 +63,7 @@ enum Runner {
         }
 
         guard cfg.isComplete else { return finish(.error, L("Setup is not complete. Open Settings.")) }
+        if let problem = cfg.folderProblem { return finish(.blocked, problem) }
         cfg.writeRcloneConfig()
 
         // --- source sanity checks ---
@@ -122,8 +124,22 @@ enum Runner {
     }
 
     static let stampFormatter: DateFormatter = {
-        let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd_HHmm"; return f
+        let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd_HHmmss"; return f
     }()
+
+    /// Both pre-0.3 minute folders and new unique second folders are readable.
+    static func archiveDate(_ name: String) -> Date? {
+        if name.range(of: #"^[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{6}-[0-9A-Fa-f]{8}$"#,
+                      options: .regularExpression) != nil {
+            return stampFormatter.date(from: String(name.prefix(17)))
+        }
+        guard name.range(of: #"^[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{4}$"#,
+                         options: .regularExpression) != nil else { return nil }
+        let old = DateFormatter()
+        old.locale = Locale(identifier: "en_US_POSIX")
+        old.dateFormat = "yyyy-MM-dd_HHmm"
+        return old.date(from: name)
+    }
 
     /// Regular files that rclone will consider. Returns -1 when the folder can't be read (missing TCC permission).
     static func countFiles(_ path: String, excludes: [String]) -> Int {
@@ -146,7 +162,7 @@ enum Runner {
         let cutoff = Date().addingTimeInterval(-Double(cfg.retentionDays) * 86400)
         for line in r.out.split(separator: "\n") {
             let name = line.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-            guard name.count == 15, let d = stampFormatter.date(from: name), d < cutoff else { continue }
+            guard let d = archiveDate(name), d < cutoff else { continue }
             rclone(["purge", "\(cfg.versionsRemote)/\(name)"])
         }
     }

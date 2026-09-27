@@ -15,16 +15,29 @@ struct RemoteFile: Identifiable, Hashable {
     let modTime: String
 }
 
+struct ArchivedFile: Identifiable, Hashable {
+    var id: String { stamp + "/" + path }
+    let stamp: String
+    let path: String
+    let size: Int64
+    let modified: Date?
+    var date: Date? { Runner.archiveDate(stamp) }
+}
+
 @MainActor
 final class AppModel: ObservableObject {
     @Published var status = StatusFile()
     @Published var cfg = AppConfig.load()
     @Published var progress: LiveProgress?
     @Published var boxSpace: (used: Int64, total: Int64)?
+    @Published var boxSpaceChecked = false
     @Published var versions: [VersionDir] = []
     @Published var versionFiles: [RemoteFile] = []
     @Published var loadingVersions = false
     @Published var loadingFiles = false
+    @Published var archivedFiles: [String: [ArchivedFile]] = [:]
+    @Published var archiveIndexLoading = false
+    @Published var archiveIndexError: String?
     @Published var toast: String?
     @Published var connection: String?
     @Published var localAccess = true
@@ -36,6 +49,7 @@ final class AppModel: ObservableObject {
 
     private var timer: Timer?
     private var pendingAgentInstall = false
+    private var archiveIndexKey: String?
 
     init() {
         Paths.ensure()
@@ -130,6 +144,16 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Starts a fresh instance once this one has quit (used after changing the language). A running backup is a
+    /// separate process and is not affected.
+    func relaunch() {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/bin/sh")
+        p.arguments = ["-c", "while /bin/kill -0 \(getpid()) 2>/dev/null; do sleep 0.2; done; exec \"$0\"", Paths.executable]
+        try? p.run()
+        NSApp.terminate(nil)
+    }
+
     func openLog(_ path: String) { NSWorkspace.shared.open(URL(fileURLWithPath: path)) }
     func openLogsFolder() { NSWorkspace.shared.open(URL(fileURLWithPath: Paths.logs)) }
     func openLocalFolder() { NSWorkspace.shared.open(URL(fileURLWithPath: cfg.localPath)) }
@@ -188,27 +212,153 @@ final class AppModel: ObservableObject {
         if cfg.backupBookmarkID == b.id { cfg.backupBookmarkID = nil; cfg.save() }
     }
 
-    func testBookmark(_ b: Bookmark) async -> String {
+    func testBookmark(_ b: Bookmark) async -> String { await checkBookmark(b).message }
+
+    func checkBookmark(_ b: Bookmark) async -> KeySetup.Outcome {
         do {
             let fs = try await RcloneDaemon.shared.fsBase(b)
             let r = try await RcloneDaemon.shared.call("operations/list", ["fs": fs, "remote": b.path.hasPrefix("/") ? "" : b.path])
-            return L("Connection works ✓ (%ld items)", (r["list"] as? [Any])?.count ?? 0)
+            return .init(ok: true, message: L("Connection works ✓ (%ld items)", (r["list"] as? [Any])?.count ?? 0))
         } catch {
-            return L("Connection failed: %@", error.localizedDescription)
+            return .init(ok: false, message: L("Connection failed: %@", error.localizedDescription))
         }
+    }
+
+    /// Number of entries in a remote folder (absolute or relative to the login folder); 0 if it doesn't exist yet.
+    /// Throws for connection problems.
+    func remoteItemCount(_ b: Bookmark, path: String) async throws -> Int {
+        let base = try await RcloneDaemon.shared.fsBase(b)
+        let absolute = path.hasPrefix("/")
+        let remote = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        do {
+            let r = try await RcloneDaemon.shared.call("operations/list", ["fs": base + (absolute ? "/" : ""), "remote": remote])
+            return (r["list"] as? [Any])?.count ?? 0
+        } catch let e as RcloneError where e.message.lowercased().contains("not found") {
+            return 0
+        }
+    }
+
+    // MARK: onboarding
+
+    @Published var showOnboarding = false
+    static let onboardingSkippedKey = "onboardingSkipped"
+
+    var shouldOfferOnboarding: Bool {
+        needsSetup && bookmarks.isEmpty && !UserDefaults.standard.bool(forKey: Self.onboardingSkippedKey)
+    }
+
+    func skipOnboarding() {
+        UserDefaults.standard.set(true, forKey: Self.onboardingSkippedKey)
+        showOnboarding = false
+    }
+
+    /// Saves the server from the assistant as a bookmark and makes it the backup destination.
+    func completeOnboarding(bookmark b: Bookmark, config: AppConfig) {
+        saveBookmark(b)
+        var c = config
+        c.use(b)
+        saveConfig(c)
+        UserDefaults.standard.set(true, forKey: Self.onboardingSkippedKey)
     }
 
     // MARK: remote queries
 
+    /// Archive files are indexed once in the background, then looked up by relative backup path in the browser.
+    func ensureArchiveIndex(force: Bool = false) {
+        guard cfg.isComplete else { return }
+        let remote = cfg.versionsRemote
+        let key = remote + "|" + String(status.lastSuccess?.end?.timeIntervalSince1970 ?? 0)
+        guard force || archiveIndexKey != key else { return }
+        if archiveIndexLoading && archiveIndexKey == key { return }
+        archiveIndexKey = key
+        archiveIndexLoading = true
+        archiveIndexError = nil
+        Task.detached {
+            let r = rclone(["lsjson", "-R", "--files-only", remote])
+            if r.code != 0, lastErrorLine(r.err).localizedCaseInsensitiveContains("not found") {
+                await MainActor.run {
+                    guard self.archiveIndexKey == key else { return }
+                    self.archivedFiles = [:]
+                    self.archiveIndexLoading = false
+                }
+                return
+            }
+            guard r.code == 0, let data = r.out.data(using: .utf8),
+                  let rows = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+                await MainActor.run {
+                    guard self.archiveIndexKey == key else { return }
+                    self.archiveIndexError = L("Could not load version history: %@", lastErrorLine(r.err))
+                    self.archiveIndexLoading = false
+                    self.archiveIndexKey = nil
+                }
+                return
+            }
+            var index: [String: [ArchivedFile]] = [:]
+            let iso = ISO8601DateFormatter()
+            for row in rows {
+                guard let full = row["Path"] as? String, let slash = full.firstIndex(of: "/") else { continue }
+                let stamp = String(full[..<slash])
+                guard Runner.archiveDate(stamp) != nil else { continue }
+                let path = String(full[full.index(after: slash)...])
+                guard !path.isEmpty else { continue }
+                let entry = ArchivedFile(stamp: stamp, path: path,
+                                         size: (row["Size"] as? NSNumber)?.int64Value ?? 0,
+                                         modified: (row["ModTime"] as? String).flatMap(iso.date(from:)))
+                index[path, default: []].append(entry)
+            }
+            for path in Array(index.keys) { index[path]?.sort { $0.stamp > $1.stamp } }
+            let result = index
+            await MainActor.run {
+                guard self.archiveIndexKey == key else { return }
+                self.archivedFiles = result
+                self.archiveIndexLoading = false
+            }
+        }
+    }
+
+    /// Browser paths are relative to the login folder, except bookmarks rooted at an absolute path.
+    func archiveRelativePath(_ itemPath: String, for bookmark: Bookmark) -> String? {
+        guard cfg.backupBookmarkID == bookmark.id else { return nil }
+        let root: String
+        if !cfg.remotePath.hasPrefix("/") || bookmark.path.hasPrefix("/") {
+            root = cfg.remotePath.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        } else if bookmark.host.hasSuffix(".your-storagebox.de"), cfg.remotePath.hasPrefix("/home/") {
+            root = String(cfg.remotePath.dropFirst("/home/".count))
+        } else {
+            return nil
+        }
+        guard itemPath.hasPrefix(root + "/") else { return nil }
+        return String(itemPath.dropFirst(root.count + 1))
+    }
+
+    func downloadArchived(_ entry: ArchivedFile, to folder: URL) {
+        let name = RPath.name(entry.path)
+        var taken = Set((try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? [])
+        for t in TransferManager.shared.items where t.isActive || t.state == .paused {
+            if let p = t.localDestination, RPath.parent(p) == folder.path { taken.insert(RPath.name(p)) }
+        }
+        let target = folder.appendingPathComponent(RPath.uniqueName(name, taken: taken))
+        let t = Transfer(kind: .download, name: name, server: cfg.host, isDir: false,
+                         srcFs: cfg.versionsRemote, srcRemote: entry.id,
+                         dstFs: "/", dstRemote: String(target.path.dropFirst()),
+                         destLabel: target.path.replacingOccurrences(of: Paths.home, with: "~"), refreshKey: nil)
+        TransferManager.shared.enqueue(t)
+    }
+
     func refreshBoxSpace() {
         guard cfg.isConnectionConfigured else { return }
+        boxSpaceChecked = false
+        boxSpace = nil
         Task.detached {
             let r = rclone(["about", "\(AppInfo.remoteName):", "--json"])
-            guard r.code == 0, let d = r.out.data(using: .utf8),
+            if r.code == 0, let d = r.out.data(using: .utf8),
                   let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
                   let used = (j["used"] as? NSNumber)?.int64Value,
-                  let total = (j["total"] as? NSNumber)?.int64Value else { return }
-            await MainActor.run { self.boxSpace = (used, total) }
+                  let total = (j["total"] as? NSNumber)?.int64Value {
+                await MainActor.run { self.boxSpace = (used, total); self.boxSpaceChecked = true }
+            } else {
+                await MainActor.run { self.boxSpaceChecked = true }
+            }
         }
     }
 
@@ -229,7 +379,7 @@ final class AppModel: ObservableObject {
             let r = rclone(["lsf", "--dirs-only", remote])
             let list = r.out.split(separator: "\n")
                 .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: "/")) }
-                .map { VersionDir(name: $0, date: Runner.stampFormatter.date(from: $0)) }
+                .map { VersionDir(name: $0, date: Runner.archiveDate($0)) }
                 .sorted { $0.name > $1.name }
             await MainActor.run { self.versions = list; self.loadingVersions = false }
         }
@@ -289,6 +439,11 @@ enum Fmt {
 
     static let date: DateFormatter = {
         let f = DateFormatter(); f.locale = locale; f.dateStyle = .medium; f.timeStyle = .short; return f
+    }()
+    /// "Today at 21:00", "Tomorrow at 21:00", "3 Oct 2026 at 21:00".
+    static let dayTime: DateFormatter = {
+        let f = DateFormatter(); f.locale = locale; f.dateStyle = .medium; f.timeStyle = .short
+        f.doesRelativeDateFormatting = true; return f
     }()
     static let relative: RelativeDateTimeFormatter = {
         let f = RelativeDateTimeFormatter(); f.locale = locale; f.unitsStyle = .full; return f

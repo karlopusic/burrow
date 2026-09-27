@@ -16,9 +16,12 @@ struct Bookmark: Codable, Identifiable, Hashable {
     var path = ""
     /// Folder (relative to the login folder) where "Delete" moves items.
     var trashFolder = ".sbs-trash"
+    /// nil preserves the behavior of existing Hetzner bookmarks.
+    var remoteShell: Bool? = nil
 
     var displayName: String { name.isEmpty ? "\(user)@\(host)" : name }
     var isComplete: Bool { !host.isEmpty && !user.isEmpty && (auth == .password || !keyFile.isEmpty) }
+    var usesRemoteShell: Bool { remoteShell ?? host.hasSuffix(".your-storagebox.de") }
 
     static func storageBox(user: String, keyFile: String) -> Bookmark {
         var b = Bookmark()

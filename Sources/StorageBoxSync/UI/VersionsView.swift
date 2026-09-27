@@ -15,15 +15,26 @@ struct VersionsView: View {
                     Button { model.loadVersions() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.borderless)
                 }
                 if model.loadingVersions { ProgressView().frame(maxWidth: .infinity) }
-                List(model.versions, selection: $selected) { v in
-                    VStack(alignment: .leading) {
-                        Text(v.date.map { Fmt.date.string(from: $0) } ?? v.name)
-                        Text(verbatim: v.name).font(.caption).foregroundStyle(.secondary)
-                    }.tag(v)
-                }
                 if model.versions.isEmpty && !model.loadingVersions {
-                    Text("No archived versions yet. When you change or delete a file, the previous copy is kept here for \(model.cfg.retentionDays) days.")
-                        .font(.callout).foregroundStyle(.secondary)
+                    ContentUnavailableView {
+                        Label("No archived versions yet", systemImage: "clock.arrow.circlepath")
+                    } description: {
+                        Text("When you change or delete a file, the previous copy is kept here for \(model.cfg.retentionDays) days.")
+                    }
+                } else {
+                    List(model.versions, selection: $selected) { v in
+                        Label {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(v.date.map { Fmt.date.string(from: $0) } ?? v.name)
+                                Text(verbatim: v.name).font(.caption).foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "archivebox.fill").foregroundStyle(.orange)
+                        }
+                        .tag(v)
+                    }
+                    .listStyle(.sidebar)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 }
             }
             .frame(minWidth: 220, maxWidth: 290)
@@ -34,10 +45,14 @@ struct VersionsView: View {
                     HStack {
                         Text("Previous versions from \(v.date.map { Fmt.date.string(from: $0) } ?? v.name)").font(.headline)
                         Spacer()
-                        Button("Restore selected") {
+                        Button {
                             if let f = model.versionFiles.first(where: { $0.id == selectedFile }) { model.restore(version: v, file: f) }
-                        }.disabled(selectedFile == nil)
-                        Button("Restore all") { model.restore(version: v, file: nil) }
+                        } label: { Label("Restore selected", systemImage: "arrow.uturn.backward") }
+                        .disabled(selectedFile == nil)
+                        Button { model.restore(version: v, file: nil) } label: {
+                            Label("Restore all", systemImage: "arrow.uturn.backward.circle.fill")
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
                     Text("Restores go to ~/Downloads/StorageBox Sync Restore/ – your working folder is never touched.")
                         .font(.caption).foregroundStyle(.secondary)
@@ -50,9 +65,11 @@ struct VersionsView: View {
                         TableColumn("Size") { Text(Fmt.bytes($0.size)) }.width(80)
                     }
                 } else {
-                    Spacer()
-                    Text("Select a version on the left").foregroundStyle(.secondary).frame(maxWidth: .infinity)
-                    Spacer()
+                    ContentUnavailableView {
+                        Label("Select a version on the left", systemImage: "sidebar.left")
+                    } description: {
+                        Text("Restores go to ~/Downloads/StorageBox Sync Restore/ – your working folder is never touched.")
+                    }
                 }
             }
             .padding(.leading, 8)

@@ -1,0 +1,400 @@
+/* StorageBox Sync – German. Keys are the English source strings. */
+
+/* Menu bar */
+"Stop" = "Stoppen";
+"Last backup: %@" = "Letztes Backup: %@";
+"Back up now" = "Jetzt sichern";
+"No successful backup yet" = "Noch kein erfolgreiches Backup";
+"Open %@" = "%@ öffnen";
+"Quit" = "Beenden";
+"Preview in progress…" = "Vorschau läuft …";
+"Backup in progress…" = "Backup läuft …";
+
+/* Tabs */
+"Overview" = "Übersicht";
+"Versions" = "Versionen";
+"Settings" = "Einstellungen";
+
+/* Banners */
+"Finish setup" = "Einrichtung abschließen";
+"Enter your Storage Box connection and choose the folder to back up." = "Gib die Verbindung zu deiner Storage Box ein und wähle den Ordner, der gesichert werden soll.";
+"Open Settings" = "Einstellungen öffnen";
+"Waiting for the previous app" = "Warte auf die vorherige App";
+"A backup started by SIM Backup is still running. Settings will be imported automatically once it finishes – reopen this app then." = "Ein von SIM Backup gestartetes Backup läuft noch. Die Einstellungen werden automatisch übernommen, sobald es fertig ist – öffne die App dann erneut.";
+"No access to the local folder" = "Kein Zugriff auf den lokalen Ordner";
+"Add StorageBox Sync in System Settings → Privacy & Security → Full Disk Access, then reopen the app. Scheduled backups can't read protected folders like Desktop without it." = "Füge StorageBox Sync unter Systemeinstellungen → Datenschutz & Sicherheit → Festplattenvollzugriff hinzu und öffne die App erneut. Ohne diese Berechtigung können geplante Backups geschützte Ordner wie den Schreibtisch nicht lesen.";
+"Open Full Disk Access" = "Festplattenvollzugriff öffnen";
+"Check again" = "Erneut prüfen";
+
+/* Overview */
+"Last successful backup: %@" = "Letztes erfolgreiches Backup: %@";
+"Next scheduled run: %@" = "Nächster geplanter Lauf: %@";
+"Scheduled backups are off" = "Geplante Backups sind ausgeschaltet";
+"Storage Box: %@ of %@ used" = "Storage Box: %@ von %@ belegt";
+"Data" = "Daten";
+"Files" = "Dateien";
+"Checked" = "Geprüft";
+"Elapsed" = "Dauer";
+"Open log" = "Protokoll öffnen";
+"Preview changes" = "Änderungen anzeigen";
+"Run anyway" = "Trotzdem ausführen";
+"Open local folder" = "Lokalen Ordner öffnen";
+"Open logs folder" = "Protokollordner öffnen";
+"Last preview · %@" = "Letzte Vorschau · %@";
+"To upload: %lld · To archive: %lld · Date fixes: %lld" = "Hochzuladen: %lld · Zu archivieren: %lld · Datumskorrekturen: %lld";
+"Show list" = "Liste anzeigen";
+"History" = "Verlauf";
+"No runs yet." = "Noch keine Läufe.";
+"preview" = "Vorschau";
+"scheduled" = "geplant";
+"manual" = "manuell";
+
+/* Preview sheet */
+"Preview · %@" = "Vorschau · %@";
+"Close" = "Schließen";
+"“upload” = new or changed file goes to the box. “archive” = the old copy on the box moves to the versions folder – nothing is deleted." = "„Upload“ = neue oder geänderte Datei wird auf die Box übertragen. „Archiv“ = die alte Kopie auf der Box wandert in den Versionsordner – es wird nichts gelöscht.";
+"All (%lld)" = "Alle (%lld)";
+"Upload (%lld)" = "Upload (%lld)";
+"Archive (%lld)" = "Archiv (%lld)";
+"Search…" = "Suchen …";
+"Type" = "Art";
+"Path" = "Pfad";
+"Size" = "Größe";
+"upload" = "Upload";
+"archive" = "Archiv";
+
+/* Versions */
+"Version archive" = "Versionsarchiv";
+"No archived versions yet. When you change or delete a file, the previous copy is kept here for %lld days." = "Noch keine archivierten Versionen. Wenn du eine Datei änderst oder löschst, wird die vorherige Kopie hier %lld Tage aufbewahrt.";
+"Previous versions from %@" = "Frühere Versionen vom %@";
+"Restore selected" = "Auswahl wiederherstellen";
+"Restore all" = "Alle wiederherstellen";
+"Restores go to ~/Downloads/StorageBox Sync Restore/ – your working folder is never touched." = "Wiederhergestellte Dateien landen in ~/Downloads/StorageBox Sync Restore/ – dein Arbeitsordner wird nie verändert.";
+"File" = "Datei";
+"Modified" = "Geändert";
+"Select a version on the left" = "Wähle links eine Version";
+
+/* Settings */
+"Storage Box connection" = "Verbindung zur Storage Box";
+"Server" = "Server";
+"Username" = "Benutzername";
+"Port" = "Port";
+"SSH key" = "SSH-Schlüssel";
+"Test connection" = "Verbindung testen";
+"First-time setup: install SSH key" = "Ersteinrichtung: SSH-Schlüssel installieren";
+"Enter your Storage Box password once. The app creates its own SSH key, adds it to the box, and from then on logs in with the key only – the password is not stored." = "Gib das Passwort deiner Storage Box einmal ein. Die App erstellt einen eigenen SSH-Schlüssel, hinterlegt ihn auf der Box und meldet sich danach nur noch mit dem Schlüssel an – das Passwort wird nicht gespeichert.";
+"In Hetzner Console the box must have “SSH support” enabled." = "In der Hetzner Console muss für die Box „SSH-Unterstützung“ aktiviert sein.";
+"Storage Box password" = "Passwort der Storage Box";
+"Install key" = "Schlüssel installieren";
+"Folders" = "Ordner";
+"Local folder" = "Lokaler Ordner";
+"Choose…" = "Auswählen …";
+"Folder on the Storage Box" = "Ordner auf der Storage Box";
+"Versions folder on the Storage Box" = "Versionsordner auf der Storage Box";
+"The box folder becomes an exact mirror of the local folder. Files you change or delete locally are moved to the versions folder instead of being overwritten." = "Der Ordner auf der Box wird ein exaktes Abbild des lokalen Ordners. Dateien, die du lokal änderst oder löschst, werden in den Versionsordner verschoben statt überschrieben.";
+"Schedule" = "Zeitplan";
+"Automatic backup" = "Automatisches Backup";
+"Frequency" = "Häufigkeit";
+"Every day" = "Täglich";
+"Once a week" = "Einmal pro Woche";
+"Day" = "Tag";
+"Time" = "Uhrzeit";
+"If the Mac is off or asleep at that time, the backup runs as soon as it wakes up." = "Ist der Mac zu dieser Zeit ausgeschaltet oder im Ruhezustand, startet das Backup, sobald er aufwacht.";
+"Versions & safety" = "Versionen & Sicherheit";
+"Keep old versions for %lld days" = "Alte Versionen %lld Tage aufbewahren";
+"Stop if a run would archive more than %lld files" = "Abbrechen, wenn ein Lauf mehr als %lld Dateien archivieren würde";
+"If more than 20 percent of local files disappear between backups, the run is blocked until you confirm it manually." = "Verschwinden zwischen zwei Backups mehr als 20 Prozent der lokalen Dateien, wird der Lauf blockiert, bis du ihn manuell bestätigst.";
+"Permissions" = "Berechtigungen";
+"Local folder is readable ✓" = "Lokaler Ordner ist lesbar ✓";
+"Revert" = "Zurücksetzen";
+"Save" = "Sichern";
+
+/* Model / runner messages */
+"Could not start: %@" = "Start nicht möglich: %@";
+"Settings saved." = "Einstellungen gesichert.";
+"Checking…" = "Wird geprüft …";
+"Connection works ✓" = "Verbindung funktioniert ✓";
+"Connection failed: %@" = "Verbindung fehlgeschlagen: %@";
+"Restoring…" = "Wird wiederhergestellt …";
+"Restored to Downloads/%@" = "Wiederhergestellt in Downloads/%@";
+"Restore failed: %@" = "Wiederherstellung fehlgeschlagen: %@";
+"Skipped" = "Übersprungen";
+"A backup is already running." = "Es läuft bereits ein Backup.";
+"Preview finished" = "Vorschau fertig";
+"To upload: %ld, to archive: %ld" = "Hochzuladen: %ld, zu archivieren: %ld";
+"Backup finished" = "Backup fertig";
+"Uploaded: %ld, archived: %ld" = "Hochgeladen: %ld, archiviert: %ld";
+"Stopped" = "Gestoppt";
+"Preview failed" = "Vorschau fehlgeschlagen";
+"Backup failed" = "Backup FEHLGESCHLAGEN";
+"Setup is not complete. Open Settings." = "Die Einrichtung ist nicht abgeschlossen. Öffne die Einstellungen.";
+"Local folder not found: %@" = "Lokaler Ordner nicht gefunden: %@";
+"No access to the local folder. Grant Full Disk Access." = "Kein Zugriff auf den lokalen Ordner. Erteile Festplattenvollzugriff.";
+"The local folder is empty – backup blocked." = "Der lokale Ordner ist leer – Backup blockiert.";
+"The local folder has %ld files, last time it had %ld. Backup blocked for safety – use “Run anyway” if this is intended." = "Der lokale Ordner enthält %ld Dateien, beim letzten Mal waren es %ld. Das Backup wurde zur Sicherheit blockiert – wähle „Trotzdem ausführen“, wenn das beabsichtigt ist.";
+"Could not start rclone: %@" = "rclone konnte nicht gestartet werden: %@";
+"Stopped by user. The next run continues where this one left off." = "Vom Benutzer gestoppt. Der nächste Lauf macht dort weiter, wo dieser aufgehört hat.";
+"Errors (%ld): %@" = "Fehler (%ld): %@";
+"Preview finished." = "Vorschau fertig.";
+"Backup successful." = "Backup erfolgreich.";
+"Could not reach %@ on port %ld." = "%@ ist auf Port %ld nicht erreichbar.";
+"Could not create SSH key: %@" = "SSH-Schlüssel konnte nicht erstellt werden: %@";
+"Public key %@ is missing." = "Der öffentliche Schlüssel %@ fehlt.";
+"Login failed: %@" = "Anmeldung fehlgeschlagen: %@";
+"Could not upload the key: %@" = "Der Schlüssel konnte nicht hochgeladen werden: %@";
+"SSH key installed. The password is no longer needed." = "SSH-Schlüssel installiert. Das Passwort wird nicht mehr benötigt.";
+
+/* Servers & bookmarks */
+"Servers" = "Server";
+"Add Server…" = "Server hinzufügen …";
+"Edit…" = "Bearbeiten …";
+"Remove…" = "Entfernen …";
+"Remove" = "Entfernen";
+"Remove this server?" = "Diesen Server entfernen?";
+"Only the bookmark is removed. Nothing on the server is changed." = "Nur das Lesezeichen wird entfernt. Auf dem Server wird nichts geändert.";
+"Name" = "Name";
+"e.g. Storage Box, Client server" = "z. B. Storage Box, Kundenserver";
+"Hetzner Storage Box: server uXXXXXX.your-storagebox.de, port 23, username uXXXXXX." = "Hetzner Storage Box: Server uXXXXXX.your-storagebox.de, Port 23, Benutzername uXXXXXX.";
+"Authentication" = "Anmeldung";
+"Method" = "Methode";
+"Password" = "Passwort";
+"Key file" = "Schlüsseldatei";
+"Install a key on this server" = "Einen Schlüssel auf diesem Server installieren";
+"Enter the account password once. A dedicated key is created if the file above doesn't exist yet, and appended to ~/.ssh/authorized_keys on the server. The password is not stored." = "Gib das Passwort des Kontos einmal ein. Existiert die Datei oben noch nicht, wird ein eigener Schlüssel erstellt und auf dem Server an ~/.ssh/authorized_keys angehängt. Das Passwort wird nicht gespeichert.";
+"Account password" = "Passwort des Kontos";
+"Password (leave empty to keep)" = "Passwort (leer lassen, um es beizubehalten)";
+"Stored in your macOS Keychain. Scheduled backups need SSH key authentication." = "Wird im macOS-Schlüsselbund gespeichert. Geplante Backups benötigen die Anmeldung per SSH-Schlüssel.";
+"Start folder" = "Startordner";
+"empty = login folder" = "leer = Anmeldeordner";
+"Trash folder" = "Papierkorbordner";
+"“Delete” moves items into the trash folder (relative to the login folder), so they can be put back." = "„Löschen“ verschiebt Objekte in den Papierkorbordner (relativ zum Anmeldeordner), sodass sie zurückgelegt werden können.";
+"Test Connection" = "Verbindung testen";
+"Cancel" = "Abbrechen";
+"No password saved for %@." = "Für %@ ist kein Passwort gespeichert.";
+"Connection works ✓ (%ld items)" = "Verbindung funktioniert ✓ (%ld Objekte)";
+
+/* Browser */
+"Folder" = "Ordner";
+"Kind" = "Art";
+"Creating folder…" = "Ordner wird erstellt …";
+"“%@” already exists." = "„%@“ existiert bereits.";
+"Renaming…" = "Wird umbenannt …";
+"Moving to trash…" = "Wird in den Papierkorb gelegt …";
+"Deleting…" = "Wird gelöscht …";
+"Emptying trash…" = "Papierkorb wird entleert …";
+"Moving…" = "Wird bewegt …";
+"Can't move a folder into itself." = "Ein Ordner kann nicht in sich selbst bewegt werden.";
+"Loading preview…" = "Vorschau wird geladen …";
+"Search in this folder" = "In diesem Ordner suchen";
+"New Folder" = "Neuer Ordner";
+"New Folder…" = "Neuer Ordner …";
+"Create" = "Erstellen";
+"Rename" = "Umbenennen";
+"Rename…" = "Umbenennen …";
+"Delete permanently?" = "Endgültig löschen?";
+"Delete Permanently" = "Endgültig löschen";
+"Delete Permanently…" = "Endgültig löschen …";
+"These items will be removed from the server for good. This can't be undone." = "Diese Objekte werden endgültig vom Server entfernt. Das kann nicht widerrufen werden.";
+"Empty the trash?" = "Papierkorb entleeren?";
+"Empty Trash" = "Papierkorb entleeren";
+"Empty Trash…" = "Papierkorb entleeren …";
+"Everything in the trash on this server will be deleted for good. This can't be undone." = "Alles im Papierkorb dieses Servers wird endgültig gelöscht. Das kann nicht widerrufen werden.";
+"Back" = "Zurück";
+"Forward" = "Vorwärts";
+"Enclosing folder" = "Übergeordneter Ordner";
+"Refresh" = "Aktualisieren";
+"Upload" = "Hochladen";
+"Upload…" = "Hochladen …";
+"Download" = "Laden";
+"Download to…" = "Laden nach …";
+"Download to Downloads" = "In „Downloads“ laden";
+"Download Here" = "Hierher laden";
+"Move to Trash" = "In den Papierkorb legen";
+"View" = "Darstellung";
+"Show Hidden Files" = "Unsichtbare Dateien einblenden";
+"Open Trash" = "Papierkorb öffnen";
+"Paste" = "Einsetzen";
+"Paste Here" = "Hier einsetzen";
+"Trash – deleted items stay here until you empty it. Use “Put Back” to restore them." = "Papierkorb – gelöschte Objekte bleiben hier, bis du ihn entleerst. Mit „Zurücklegen“ stellst du sie wieder her.";
+"Put Back" = "Zurücklegen";
+"Searching…" = "Suche läuft …";
+"%lld results" = "%lld Treffer";
+"%lld items" = "%lld Objekte";
+"· %lld selected" = "· %lld ausgewählt";
+"%lld to move" = "%lld zum Bewegen";
+"%lld to copy" = "%lld zum Kopieren";
+"Nothing found" = "Nichts gefunden";
+"This folder is empty" = "Dieser Ordner ist leer";
+"Drag files here to upload" = "Dateien zum Hochladen hierher ziehen";
+"Open" = "Öffnen";
+"Quick Look" = "Übersicht";
+"Duplicate" = "Duplizieren";
+"Copy" = "Kopieren";
+"Cut" = "Ausschneiden";
+"Get Info" = "Informationen";
+"Copy Path" = "Pfad kopieren";
+"Show in Folder" = "Im Ordner zeigen";
+"“%@” already exists on the server." = "„%@“ existiert bereits auf dem Server.";
+"Replace moves the existing item to the trash first, so nothing is lost." = "„Ersetzen“ legt das vorhandene Objekt zuerst in den Papierkorb, sodass nichts verloren geht.";
+"Keep Both" = "Beide behalten";
+"Replace" = "Ersetzen";
+"Skip" = "Überspringen";
+"%@ in %lld files" = "%@ in %lld Dateien";
+"Calculate" = "Berechnen";
+
+/* Transfers */
+"Transfers" = "Übertragungen";
+"No transfers yet" = "Noch keine Übertragungen";
+"Drag files into a server folder to upload, or right-click a file to download it." = "Ziehe Dateien in einen Serverordner, um sie hochzuladen, oder klicke eine Datei mit der rechten Maustaste an, um sie zu laden.";
+"%lld active" = "%lld aktiv";
+"Clear Finished" = "Abgeschlossene entfernen";
+"Waiting…" = "Wartet …";
+"Paused" = "Angehalten";
+"Done · %@ · %@" = "Fertig · %@ · %@";
+"Failed" = "Fehlgeschlagen";
+"Cancelled" = "Abgebrochen";
+"Pause" = "Anhalten";
+"Resume" = "Fortsetzen";
+"Retry" = "Erneut versuchen";
+"Show in Finder" = "Im Finder zeigen";
+"Transfers finished" = "Übertragungen abgeschlossen";
+"Transfer failed" = "Übertragung fehlgeschlagen";
+"Downloaded: %@" = "Geladen: %@";
+"Uploaded: %@" = "Hochgeladen: %@";
+
+/* Sidebar / backup */
+"Backup" = "Backup";
+"Status" = "Status";
+"Backup Settings" = "Backup-Einstellungen";
+"Backup destination" = "Backup-Ziel";
+"Add a server with SSH key authentication under Servers in the sidebar first." = "Füge zuerst in der Seitenleiste unter „Server“ einen Server mit Anmeldung per SSH-Schlüssel hinzu.";
+"Backups run unattended, so only servers that use an SSH key are listed. Edit connection details under Servers." = "Backups laufen unbeaufsichtigt, daher werden nur Server mit SSH-Schlüssel angezeigt. Verbindungsdaten bearbeitest du unter „Server“.";
+
+/* Host key verification */
+"Could not read the host keys of %@." = "Die Host-Schlüssel von %@ konnten nicht gelesen werden.";
+"The server's identity has not been confirmed yet." = "Die Identität des Servers wurde noch nicht bestätigt.";
+"Confirm the server's identity" = "Identität des Servers bestätigen";
+"This is the first connection to this server. To be sure you are talking to the real server and not an impostor, compare the fingerprint below with the one your provider publishes. They must match exactly." = "Dies ist die erste Verbindung zu diesem Server. Um sicherzugehen, dass du mit dem echten Server verbunden bist und nicht mit einem Betrüger, vergleiche den Fingerabdruck unten mit dem, den dein Anbieter veröffentlicht. Sie müssen exakt übereinstimmen.";
+"Hetzner publishes the fingerprints of its Storage Boxes in the Storage Box documentation." = "Hetzner veröffentlicht die Fingerabdrücke seiner Storage Boxen in der Storage-Box-Dokumentation.";
+"Only continue if the fingerprints match. The server is remembered in ~/.ssh/known_hosts, and every later connection is checked against it." = "Fahre nur fort, wenn die Fingerabdrücke übereinstimmen. Der Server wird in ~/.ssh/known_hosts gespeichert, und jede spätere Verbindung wird damit abgeglichen.";
+"Trust This Server" = "Diesem Server vertrauen";
+"This server hasn't been verified yet" = "Dieser Server wurde noch nicht überprüft";
+"Before the first connection, confirm the server's fingerprint so nobody can impersonate it." = "Bestätige vor der ersten Verbindung den Fingerabdruck des Servers, damit sich niemand als dieser Server ausgeben kann.";
+"Verify Server…" = "Server überprüfen …";
+"The server's identity has changed" = "Die Identität des Servers hat sich geändert";
+"The server presents a different key than the one you trusted. This can mean someone is intercepting the connection. If your provider announced new keys, remove the old entry for this server from ~/.ssh/known_hosts and connect again." = "Der Server zeigt einen anderen Schlüssel als den, dem du vertraut hast. Das kann bedeuten, dass jemand die Verbindung abfängt. Hat dein Anbieter neue Schlüssel angekündigt, entferne den alten Eintrag für diesen Server aus ~/.ssh/known_hosts und verbinde dich erneut.";
+
+/* Setup assistant */
+"Open Setup Assistant" = "Einrichtungsassistent öffnen";
+"Set Up Later" = "Später einrichten";
+"Get Started" = "Los geht’s";
+"Continue" = "Fortfahren";
+"Finish" = "Fertig";
+"Welcome to StorageBox Sync" = "Willkommen bei StorageBox Sync";
+"Back up a folder of your Mac to a Hetzner Storage Box – automatically, and without ever losing an old version." = "Sichere einen Ordner deines Mac auf einer Hetzner Storage Box – automatisch und ohne je eine alte Version zu verlieren.";
+"Automatic backups" = "Automatische Backups";
+"Runs on a schedule, even when the app is closed." = "Läuft nach Zeitplan, auch wenn die App geschlossen ist.";
+"Nothing is lost" = "Nichts geht verloren";
+"Changed and deleted files are kept in a versions folder on the box." = "Geänderte und gelöschte Dateien werden in einem Versionsordner auf der Box aufbewahrt.";
+"Browse your box" = "Deine Box durchsuchen";
+"Upload, download and manage files like in the Finder." = "Dateien hochladen, laden und verwalten wie im Finder.";
+"Where should backups go?" = "Wohin sollen die Backups?";
+"Enter the login of your Storage Box. You find it in the Hetzner Console under Storage Boxes." = "Gib den Benutzernamen deiner Storage Box ein. Du findest ihn in der Hetzner Console unter „Storage Boxes“.";
+"Hetzner Storage Box" = "Hetzner Storage Box";
+"Other SFTP server" = "Anderer SFTP-Server";
+"Next, you'll confirm the server's fingerprint so nobody can impersonate it." = "Als Nächstes bestätigst du den Fingerabdruck des Servers, damit sich niemand als dieser Server ausgeben kann.";
+"Sign in with an SSH key" = "Mit SSH-Schlüssel anmelden";
+"Scheduled backups run while nobody is at the Mac, so they log in with a key instead of your password." = "Geplante Backups laufen, auch wenn niemand am Mac sitzt, daher melden sie sich mit einem Schlüssel statt mit deinem Passwort an.";
+"Create a new key" = "Neuen Schlüssel erstellen";
+"I already have a key" = "Ich habe bereits einen Schlüssel";
+"Enter your Storage Box password once. A dedicated key is created on this Mac and added to the box. The password is not stored." = "Gib das Passwort deiner Storage Box einmal ein. Auf diesem Mac wird ein eigener Schlüssel erstellt und auf der Box hinterlegt. Das Passwort wird nicht gespeichert.";
+"Install Key" = "Schlüssel installieren";
+"SSH must be enabled for the Storage Box (Hetzner Console → Storage Box → Settings)." = "SSH muss für die Storage Box aktiviert sein (Hetzner Console → Storage Box → Einstellungen).";
+"The key must be in ~/.ssh/authorized_keys on the server and have no passphrase." = "Der Schlüssel muss auf dem Server in ~/.ssh/authorized_keys stehen und darf keine Passphrase haben.";
+"Check" = "Prüfen";
+"What should be backed up?" = "Was soll gesichert werden?";
+"Choose a folder on this Mac. It is copied to a folder on the box and kept in sync." = "Wähle einen Ordner auf diesem Mac. Er wird in einen Ordner auf der Box kopiert und synchron gehalten.";
+"No folder chosen" = "Kein Ordner ausgewählt";
+"Folder on the box" = "Ordner auf der Box";
+"Versions folder" = "Versionsordner";
+"This folder on the box already contains %lld items." = "Dieser Ordner auf der Box enthält bereits %lld Objekte.";
+"On the first backup, everything in it that isn't in your local folder is moved to the versions folder – nothing is deleted, but the folder will then match your Mac exactly." = "Beim ersten Backup wird alles darin, was nicht in deinem lokalen Ordner liegt, in den Versionsordner verschoben – es wird nichts gelöscht, aber der Ordner entspricht danach exakt deinem Mac.";
+"I understand, use this folder" = "Verstanden, diesen Ordner verwenden";
+"Files you change or delete on the Mac are moved to the versions folder on the box instead of being overwritten, and kept there for %lld days." = "Dateien, die du auf dem Mac änderst oder löschst, werden in den Versionsordner auf der Box verschoben statt überschrieben und dort %lld Tage aufbewahrt.";
+"When should it run?" = "Wann soll es laufen?";
+"The backup runs in the background at this time. If the Mac is asleep or off, it runs as soon as it wakes up." = "Das Backup läuft zu dieser Zeit im Hintergrund. Ist der Mac im Ruhezustand oder ausgeschaltet, startet es, sobald er aufwacht.";
+"Full Disk Access needed" = "Festplattenvollzugriff erforderlich";
+"Scheduled backups can't read Desktop, Documents or Downloads until StorageBox Sync is allowed in System Settings → Privacy & Security → Full Disk Access." = "Geplante Backups können Schreibtisch, Dokumente und Downloads erst lesen, wenn StorageBox Sync unter Systemeinstellungen → Datenschutz & Sicherheit → Festplattenvollzugriff erlaubt ist.";
+"You're all set" = "Alles bereit";
+"We recommend a preview first: it lists what the first backup would upload, without changing anything." = "Wir empfehlen zuerst eine Vorschau: Sie zeigt, was das erste Backup hochladen würde, ohne etwas zu verändern.";
+"Choose a subfolder on the Storage Box – the whole box can't be the backup folder, because everything else in it would be moved to the versions folder." = "Wähle einen Unterordner auf der Storage Box – die ganze Box kann nicht der Backup-Ordner sein, weil sonst alles andere darauf in den Versionsordner verschoben würde.";
+"The versions folder must be outside the backup folder." = "Der Versionsordner muss außerhalb des Backup-Ordners liegen.";
+"Enter the address and login of your SFTP server." = "Gib die Adresse und den Benutzernamen deines SFTP-Servers ein.";
+"Enter your account password once. A dedicated key is created on this Mac and added to the server. The password is not stored." = "Gib das Passwort deines Kontos einmal ein. Auf diesem Mac wird ein eigener Schlüssel erstellt und auf dem Server hinterlegt. Das Passwort wird nicht gespeichert.";
+
+/* Redesigned screens */
+"No servers yet" = "Noch keine Server";
+"Next backup: %@" = "Nächstes Backup: %@";
+"Your backup is up to date" = "Dein Backup ist aktuell";
+"Backup overdue" = "Backup überfällig";
+"Backup blocked for safety" = "Backup zur Sicherheit blockiert";
+"The last backup failed" = "Das letzte Backup ist fehlgeschlagen";
+"The last backup was stopped" = "Das letzte Backup wurde gestoppt";
+"Started %@" = "Gestartet %@";
+"Run the first backup now – or preview what it would upload." = "Starte jetzt das erste Backup – oder sieh dir vorher an, was es hochladen würde.";
+"Next backup" = "Nächstes Backup";
+"Off" = "Aus";
+"Storage Box" = "Storage Box";
+"%@ of %@" = "%@ von %@";
+"%@ free" = "%@ frei";
+"Old versions" = "Alte Versionen";
+"%lld days" = "%lld Tage";
+"Changed and deleted files are kept" = "Geänderte und gelöschte Dateien bleiben erhalten";
+"No archived versions yet" = "Noch keine archivierten Versionen";
+"When you change or delete a file, the previous copy is kept here for %lld days." = "Wenn du eine Datei änderst oder löschst, wird die vorherige Kopie hier %lld Tage aufbewahrt.";
+"Drop to upload into %@" = "Loslassen zum Hochladen in %@";
+"Can't show this folder" = "Dieser Ordner kann nicht angezeigt werden";
+"Try Again" = "Erneut versuchen";
+
+/* Language */
+"Language" = "Sprache";
+"The new language is used after the app restarts." = "Die neue Sprache wird nach einem Neustart der App verwendet.";
+"Restart Now" = "Jetzt neu starten";
+
+/* Provider-neutral setup */
+"Back up a folder of your Mac to an SFTP storage server – automatically, with previous versions kept safely." = "Sichere einen Ordner deines Mac automatisch auf einem SFTP-Server und bewahre frühere Versionen sicher auf.";
+"The server must accept this key for unattended backups, and the key must have no passphrase." = "Der Server muss diesen Schlüssel für unbeaufsichtigte Backups akzeptieren; der Schlüssel darf keine Passphrase haben.";
+"Choose a folder on this Mac. It is copied to a folder on the server and kept in sync." = "Wähle einen Ordner auf diesem Mac. Er wird in einen Ordner auf dem Server kopiert und synchron gehalten.";
+"Backup folder on server" = "Backup-Ordner auf dem Server";
+"Versions folder on server" = "Versionsordner auf dem Server";
+"This server folder already contains %lld items." = "Dieser Serverordner enthält bereits %lld Elemente.";
+"On the first backup, everything in it that isn't in your local folder is moved to the versions folder. The backup folder will then match your Mac exactly." = "Beim ersten Backup wird alles, was nicht im lokalen Ordner liegt, in den Versionsordner verschoben. Danach entspricht der Backup-Ordner genau dem Ordner auf deinem Mac.";
+"Allow remote shell commands for checksums" = "Shell-Befehle auf dem Server für Prüfsummen erlauben";
+"Folder paths cannot contain dot or parent-directory segments." = "Ordnerpfade dürfen keine Segmente für das aktuelle oder übergeordnete Verzeichnis enthalten.";
+"Choose a dedicated backup subfolder on the server. The server root cannot be a backup folder." = "Wähle einen eigenen Unterordner für das Backup auf dem Server. Das Stammverzeichnis darf kein Backup-Ordner sein.";
+"Choose a dedicated versions subfolder on the server." = "Wähle einen eigenen Unterordner für Versionen auf dem Server.";
+"Download destination already exists: %@" = "Das Downloadziel existiert bereits: %@";
+"Enter your SFTP server connection and choose the folder to back up." = "Gib die Verbindung zu deinem SFTP-Server ein und wähle den zu sichernden Ordner.";
+"Server storage" = "Serverspeicher";
+"Quota unavailable on this server" = "Speicherbelegung auf diesem Server nicht verfügbar";
+
+/* File history */
+"Show previous versions" = "Frühere Versionen anzeigen";
+"Previous versions" = "Frühere Versionen";
+"Refresh version history" = "Versionsverlauf aktualisieren";
+"Loading versions…" = "Versionen werden geladen …";
+"Loading version history…" = "Versionsverlauf wird geladen …";
+"Open a copy" = "Kopie öffnen";
+"These are archived backup copies. Your current file is never replaced." = "Dies sind archivierte Backup-Kopien. Die aktuelle Datei wird nicht ersetzt.";
+"Could not load version history: %@" = "Versionsverlauf konnte nicht geladen werden: %@";
+
+/* About */
+"About StorageBox Sync…" = "Über StorageBox Sync …";
+"Version %@" = "Version %@";
+"Made by PUSH" = "Entwickelt von PUSH";
+"Open source under the MIT License. Includes rclone and Sparkle." = "Open Source unter der MIT-Lizenz. Enthält rclone und Sparkle.";
+"Check for Updates…" = "Nach Updates suchen …";
+"Changed and deleted files are kept in a versions folder on the server." = "Geänderte und gelöschte Dateien bleiben in einem Versionsordner auf dem Server erhalten.";
+"Files you change or delete on the Mac are moved to the versions folder on the server instead of being overwritten, and kept there for %lld days." = "Dateien, die du auf dem Mac änderst oder löschst, werden statt überschrieben in den Versionsordner auf dem Server verschoben und dort %lld Tage aufbewahrt.";
+"The backup folder becomes an exact mirror of the local folder. Changed or deleted files move to the versions folder instead of being overwritten." = "Der Backup-Ordner wird ein genaues Abbild des lokalen Ordners. Geänderte oder gelöschte Dateien werden statt überschrieben in den Versionsordner verschoben.";
+"“upload” = a new or changed file goes to the server. “archive” = the old server copy moves to the versions folder." = "„Upload“ = eine neue oder geänderte Datei wird auf den Server übertragen. „Archiv“ = die alte Serverkopie wird in den Versionsordner verschoben.";

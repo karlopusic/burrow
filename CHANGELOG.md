@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.3.0 – 2026-09-27
+
+Setup assistant, host-key verification and a visual redesign.
+
+- **Setup assistant** on first launch: server → confirm fingerprint → SSH key → folders → schedule, then a
+  recommended preview. Warns before mirroring into a box folder that already has content, and when Full Disk
+  Access is needed. Can be reopened from the "Finish setup" banner.
+- **Host-key verification** instead of trust-on-first-use: the server's SHA256 fingerprints are shown and must be
+  confirmed before anything is written to `~/.ssh/known_hosts` (key installation, Test Connection, browser).
+  The browser explains unverified and changed host keys instead of showing the raw ssh error.
+- Folder safety check (Settings + assistant): the whole box or `/home` can't be the backup folder, and the
+  versions folder must be outside it.
+- Redesigned overview: status hero with actions, key figures (next backup, box usage with gauge, retention),
+  source → destination card, history with status pills. New "overdue" state when a scheduled run is >12 h late.
+- Sidebar with colored icons, backup-destination marker and "Add Server…" footer; animated toast;
+  system-style empty states in browser, transfers and versions; dashed drop target in the browser.
+- Menu bar: next backup time and "Preview changes".
+- **German translation**, and a language picker (English / Hrvatski / Deutsch) in Backup Settings. The app now
+  starts in English by default instead of following the system language; scheduled runs use the same choice.
+- Dev instances started with `CFFIXED_USER_HOME` use their own LaunchAgent label.
+
 ## 0.2.1 – 2026-09-26
 
 Faster browsing.

@@ -3,7 +3,9 @@ import Foundation
 enum AppInfo {
     static let name = "StorageBox Sync"
     static let bundleID = "hr.push.storageboxsync"
-    static let agentLabel = bundleID
+    /// A dev instance started with CFFIXED_USER_HOME (a throw-away home) gets its own agent, so it can never
+    /// replace – or `launchctl bootout` – the real scheduled backup.
+    static let agentLabel = ProcessInfo.processInfo.environment["CFFIXED_USER_HOME"] == nil ? bundleID : bundleID + ".dev"
     static let remoteName = "box"
     static var version: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev" }
 }
@@ -37,6 +39,36 @@ enum Paths {
         for d in [support, logs, home + "/Library/LaunchAgents", home + "/.ssh"] {
             try? FileManager.default.createDirectory(atPath: d, withIntermediateDirectories: true)
         }
+    }
+}
+
+/// UI language chosen in Settings. English unless the user picks another one – independent of the system language.
+enum AppLanguage: String, CaseIterable, Identifiable {
+    case en, hr, de
+    var id: String { rawValue }
+    static let key = "appLanguage"
+
+    /// Always shown in its own language, so it can be found whatever the UI currently is.
+    var nativeName: String {
+        switch self {
+        case .en: return "English"
+        case .hr: return "Hrvatski"
+        case .de: return "Deutsch"
+        }
+    }
+
+    static var current: AppLanguage {
+        AppLanguage(rawValue: UserDefaults.standard.string(forKey: key) ?? "") ?? .en
+    }
+
+    /// Must run first thing in main(), before any localized string is loaded (GUI and headless runs alike).
+    static func apply() {
+        UserDefaults.standard.set([current.rawValue], forKey: "AppleLanguages")
+    }
+
+    static func set(_ lang: AppLanguage) {
+        UserDefaults.standard.set(lang.rawValue, forKey: key)
+        UserDefaults.standard.set([lang.rawValue], forKey: "AppleLanguages")
     }
 }
 

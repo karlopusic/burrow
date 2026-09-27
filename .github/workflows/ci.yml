@@ -1,0 +1,21 @@
+name: macOS build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install rclone
+        run: brew install rclone
+      - name: Check localizations
+        run: python3 -B scripts/check_strings.py
+      - name: Build unsigned review DMG
+        run: scripts/build.sh
+      - name: Verify bundle signature
+        run: codesign --verify --deep --strict "build/StorageBox Sync.app"
+      - name: Smoke test bundled frameworks
+        run: test "$(\"build/StorageBox Sync.app/Contents/MacOS/StorageBoxSync\" --version)" = "$(cat VERSION)"

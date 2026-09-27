@@ -5,21 +5,30 @@ struct SettingsView: View {
     @EnvironmentObject var model: AppModel
     @State private var draft = AppConfig()
     @State private var time = Date()
+    @State private var language = AppLanguage.current
+    @State private var showAbout = false
+    private let launchLanguage = AppLanguage.current
 
     var body: some View {
         Form {
             connectionSection
             Section("Folders") {
-                HStack {
-                    Text("Local folder")
-                    Spacer()
-                    Text(verbatim: draft.localPath.isEmpty ? "—" : draft.localPath)
-                        .foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-                    Button("Choose…") { pickFolder() }
+                LabeledContent {
+                    HStack {
+                        Text(verbatim: draft.localPath.isEmpty ? "—" : draft.localPath)
+                            .foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                        Button("Choose…") { pickFolder() }
+                    }
+                } label: {
+                    Label { Text("Local folder") } icon: { Image(systemName: "folder.fill").foregroundStyle(.blue) }
                 }
-                TextField("Folder on the Storage Box", text: $draft.remotePath, prompt: Text(verbatim: "/home/Projects"))
-                TextField("Versions folder on the Storage Box", text: $draft.versionsPath, prompt: Text(verbatim: "/home/_versions"))
-                Text("The box folder becomes an exact mirror of the local folder. Files you change or delete locally are moved to the versions folder instead of being overwritten.")
+                TextField("Backup folder on server", text: $draft.remotePath, prompt: Text(verbatim: "Projects"))
+                TextField("Versions folder on server", text: $draft.versionsPath, prompt: Text(verbatim: "_versions"))
+                if let p = current.folderProblem {
+                    Label(p, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Text("The backup folder becomes an exact mirror of the local folder. Changed or deleted files move to the versions folder instead of being overwritten.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Schedule") {
@@ -44,6 +53,20 @@ struct SettingsView: View {
                 Text("If more than 20 percent of local files disappear between backups, the run is blocked until you confirm it manually.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Section("Language") {
+                Picker("Language", selection: $language) {
+                    ForEach(AppLanguage.allCases) { Text(verbatim: $0.nativeName).tag($0) }
+                }
+                .onChange(of: language) { _, l in AppLanguage.set(l) }
+                if language != launchLanguage {
+                    HStack {
+                        Text("The new language is used after the app restarts.")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Restart Now") { model.relaunch() }
+                    }
+                }
+            }
             Section("Permissions") {
                 HStack {
                     Button("Open Full Disk Access") { model.openFullDiskAccess() }
@@ -52,15 +75,17 @@ struct SettingsView: View {
                 }
             }
             HStack {
-                Text(verbatim: "\(AppInfo.name) \(AppInfo.version)").font(.caption).foregroundStyle(.tertiary)
+                Button("About StorageBox Sync…") { showAbout = true }
                 Spacer()
                 Button("Revert") { load() }.disabled(current == model.cfg)
                 Button("Save") { model.saveConfig(current) }
-                    .buttonStyle(.borderedProminent).disabled(current == model.cfg)
+                    .buttonStyle(.borderedProminent).disabled(current == model.cfg || current.folderProblem != nil)
+                    .keyboardShortcut("s", modifiers: .command)
             }
         }
         .formStyle(.grouped)
         .onAppear { load() }
+        .sheet(isPresented: $showAbout) { AboutView() }
     }
 
     private var connectionSection: some View {

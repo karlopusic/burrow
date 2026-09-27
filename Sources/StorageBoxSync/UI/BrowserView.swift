@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 enum BrowserLayout: String { case list, icons }
 
 struct BrowserView: View {
+    @EnvironmentObject private var appModel: AppModel
     @ObservedObject var model: BrowserModel
     @AppStorage("browserLayout") private var layout: BrowserLayout = .list
     @State private var selection = Set<RemoteItem.ID>()
@@ -16,8 +17,10 @@ struct BrowserView: View {
     @State private var renaming: RemoteItem?
     @State private var renameText = ""
     @State private var infoItem: RemoteItem?
+    @State private var historyItem: RemoteItem?
     @State private var confirmPermanent: [RemoteItem]?
     @State private var confirmEmptyTrash = false
+    @StateObject private var verifier = HostVerifier()
 
     private var selectedItems: [RemoteItem] { model.visibleItems.filter { selection.contains($0.id) } }
     private var sorted: [RemoteItem] {
@@ -30,9 +33,19 @@ struct BrowserView: View {
         VStack(spacing: 0) {
             pathBar
             Divider()
+            if let problem = HostKeys.problem(in: model.error) {
+                HostKeyProblemBanner(problem: problem, host: model.bookmark.host) {
+                    verifier.ensureTrusted(host: model.bookmark.host, port: model.bookmark.port) {
+                        Task { await model.reload() }
+                    }
+                }
+                .padding(12)
+                Divider()
+            }
             if model.inTrash { trashBar; Divider() }
             content
-                .overlay { if dropTargeted { RoundedRectangle(cornerRadius: 8).stroke(Color.accentColor, lineWidth: 3).padding(4) } }
+                .overlay { if dropTargeted { dropOverlay } }
+                .animation(.easeOut(duration: 0.15), value: dropTargeted)
                 .onDrop(of: [.fileURL], isTargeted: $dropTargeted) { providers in handleDrop(providers); return true }
             Divider()
             statusBar
@@ -42,7 +55,13 @@ struct BrowserView: View {
         .onSubmit(of: .search) { model.search() }
         .onChange(of: model.searchText) { _, v in if v.isEmpty { model.clearSearch() } }
         .onChange(of: model.cwd) { _, _ in selection.removeAll() }
-        .task { await model.connect() }
+        .task {
+            await model.connect()
+            if appModel.cfg.backupBookmarkID == model.bookmark.id { appModel.ensureArchiveIndex() }
+        }
+        .onChange(of: appModel.status.lastSuccess?.end) { _, _ in
+            if appModel.cfg.backupBookmarkID == model.bookmark.id { appModel.ensureArchiveIndex() }
+        }
         .quickLookPreview($model.quickLookURL)
         .alert("New Folder", isPresented: $showNewFolder) {
             TextField("Name", text: $newFolderName)
@@ -65,6 +84,8 @@ struct BrowserView: View {
             Text("Everything in the trash on this server will be deleted for good. This can't be undone.")
         }
         .sheet(item: $infoItem) { InfoSheet(item: $0, model: model) }
+        .sheet(item: $historyItem) { VersionHistorySheet(item: $0, bookmark: model.bookmark) }
+        .hostKeyVerification(verifier)
     }
 
     // MARK: toolbar & bars
@@ -85,8 +106,8 @@ struct BrowserView: View {
                 .help("New Folder").keyboardShortcut("n", modifiers: [.command, .shift]).disabled(model.searchResults != nil)
             Button { chooseUpload() } label: { Image(systemName: "square.and.arrow.up") }
                 .help("Upload…").disabled(model.searchResults != nil)
-            Button { downloadSelection(ask: false) } label: { Image(systemName: "square.and.arrow.down") }
-                .help("Download to Downloads").disabled(selection.isEmpty)
+            Button { downloadSelection(ask: true) } label: { Image(systemName: "square.and.arrow.down") }
+                .help("Download to…").disabled(selection.isEmpty)
             Button { deleteSelection() } label: { Image(systemName: "trash") }
                 .help(model.inTrash ? Text("Delete Permanently") : Text("Move to Trash")).disabled(selection.isEmpty)
             Picker("View", selection: $layout) {
@@ -97,6 +118,9 @@ struct BrowserView: View {
             Menu {
                 Toggle("Show Hidden Files", isOn: $model.showHidden)
                 Button("Open Trash") { model.openTrash() }
+                if appModel.cfg.backupBookmarkID == model.bookmark.id {
+                    Button("Refresh version history") { appModel.ensureArchiveIndex(force: true) }
+                }
                 Divider()
                 Button("Paste") { model.paste() }.disabled(model.clipboard == nil)
             } label: { Image(systemName: "ellipsis.circle") }
@@ -106,7 +130,7 @@ struct BrowserView: View {
     private var pathBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 2) {
-                Image(systemName: "server.rack").foregroundStyle(.secondary).padding(.trailing, 4)
+                Image(systemName: "server.rack").foregroundStyle(.blue).padding(.trailing, 4)
                 ForEach(Array(model.breadcrumbs.enumerated()), id: \.offset) { i, crumb in
                     if i > 0 { Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary) }
                     Button(crumb.name) { model.open(crumb.path) }
@@ -119,6 +143,24 @@ struct BrowserView: View {
             }
             .padding(.horizontal, 10).padding(.vertical, 6)
         }
+        .background(.bar)
+    }
+
+    private var dropOverlay: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.accentColor.opacity(0.08))
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 2, dash: [8, 5]))
+            Label { Text("Drop to upload into \(RPath.name(model.cwd).isEmpty ? model.bookmark.displayName : RPath.name(model.cwd))") } icon: {
+                Image(systemName: "arrow.up.doc.fill")
+            }
+            .font(.headline).foregroundStyle(Color.accentColor)
+            .padding(.horizontal, 14).padding(.vertical, 8)
+            .background(.regularMaterial, in: Capsule())
+        }
+        .padding(6)
+        .allowsHitTesting(false)
+        .transition(.opacity)
     }
 
     private var trashBar: some View {
@@ -138,12 +180,20 @@ struct BrowserView: View {
             if model.loading || model.refreshing || model.busy != nil || model.searching || model.pendingOps > 0 { ProgressView().controlSize(.small) }
             if let b = model.busy { Text(b) }
             else if model.searching { Text("Searching…") }
+            else if appModel.archiveIndexLoading && appModel.cfg.backupBookmarkID == model.bookmark.id {
+                Text("Loading version history…")
+            }
             else if let r = model.searchResults { Text("\(r.count) results") }
             else { Text("\(model.visibleItems.count) items") }
             if !selection.isEmpty { Text("· \(selection.count) selected").foregroundStyle(.secondary) }
-            if let e = model.error {
+            if let f = verifier.failure {
+                Label(f, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange).lineLimit(1)
+            } else if let e = model.error, HostKeys.problem(in: e) == nil {
                 Label(e, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange).lineLimit(1)
                 Button { model.error = nil } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.borderless)
+            } else if let e = appModel.archiveIndexError, appModel.cfg.backupBookmarkID == model.bookmark.id {
+                Label(e, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange).lineLimit(1)
+                Button("Retry") { appModel.ensureArchiveIndex(force: true) }.controlSize(.small)
             }
             Spacer()
             if let clip = model.clipboard {
@@ -161,15 +211,23 @@ struct BrowserView: View {
         if model.loading && model.visibleItems.isEmpty {
             VStack { Spacer(); ProgressView(); Spacer() }.frame(maxWidth: .infinity)
         } else if model.visibleItems.isEmpty {
-            VStack(spacing: 8) {
-                Spacer()
-                Image(systemName: model.searchResults != nil ? "magnifyingglass" : "tray").font(.largeTitle).foregroundStyle(.tertiary)
-                (model.searchResults != nil ? Text("Nothing found") : Text("This folder is empty"))
-                    .foregroundStyle(.secondary)
-                if model.searchResults == nil { Text("Drag files here to upload").font(.callout).foregroundStyle(.tertiary) }
-                Spacer()
+            if model.searchResults != nil {
+                ContentUnavailableView.search(text: model.searchText)
+            } else if HostKeys.problem(in: model.error) != nil || (model.error != nil && model.items.isEmpty) {
+                ContentUnavailableView {
+                    Label("Can't show this folder", systemImage: "wifi.exclamationmark")
+                } description: {
+                    if HostKeys.problem(in: model.error) == nil { Text(verbatim: model.error ?? "") }
+                } actions: {
+                    Button("Try Again") { Task { await model.reload() } }
+                }
+            } else {
+                ContentUnavailableView {
+                    Label("This folder is empty", systemImage: "folder")
+                } description: {
+                    Text("Drag files here to upload")
+                }
             }
-            .frame(maxWidth: .infinity)
         } else if layout == .list {
             table
         } else {
@@ -183,6 +241,11 @@ struct BrowserView: View {
                 HStack(spacing: 6) {
                     Image(nsImage: item.icon).resizable().frame(width: 16, height: 16)
                     Text(model.searchResults != nil ? item.path : item.name).lineLimit(1).truncationMode(.middle)
+                    if !archiveEntries(for: item).isEmpty {
+                        Button { historyItem = item } label: { Image(systemName: "clock.arrow.circlepath") }
+                            .buttonStyle(.plain).foregroundStyle(.orange)
+                            .help("Show previous versions")
+                    }
                 }
             }
             TableColumn("Modified", value: \.modifiedSort) { item in
@@ -213,7 +276,17 @@ struct BrowserView: View {
                 ForEach(sorted) { item in
                     let selected = selection.contains(item.id)
                     VStack(spacing: 4) {
-                        Image(nsImage: item.icon).resizable().frame(width: 56, height: 56)
+                        ZStack(alignment: .topTrailing) {
+                            Image(nsImage: item.icon).resizable().frame(width: 56, height: 56)
+                            if !archiveEntries(for: item).isEmpty {
+                                Button { historyItem = item } label: {
+                                    Image(systemName: "clock.arrow.circlepath")
+                                        .font(.caption.weight(.semibold)).foregroundStyle(.orange)
+                                        .padding(3).background(.regularMaterial, in: Circle())
+                                }
+                                .buttonStyle(.plain).help("Show previous versions")
+                            }
+                        }
                         Text(item.name).font(.caption).lineLimit(2).multilineTextAlignment(.center)
                             .padding(.horizontal, 4)
                             .background(selected ? Color.accentColor : .clear, in: RoundedRectangle(cornerRadius: 4))
@@ -247,9 +320,12 @@ struct BrowserView: View {
         } else {
             if items.count == 1, let item = items.first {
                 if item.isDir { Button("Open") { activate(item) } } else { Button("Quick Look") { activate(item) } }
+                if !archiveEntries(for: item).isEmpty {
+                    Button("Show previous versions") { historyItem = item }
+                }
             }
-            Button("Download") { download(items, ask: false) }
             Button("Download to…") { download(items, ask: true) }
+            Button("Download to Downloads") { download(items, ask: false) }
             Divider()
             if model.inTrash {
                 Button("Put Back") { model.putBack(items) }.disabled(!items.allSatisfy { model.canPutBack($0) })
@@ -275,6 +351,11 @@ struct BrowserView: View {
     }
 
     // MARK: actions
+
+    private func archiveEntries(for item: RemoteItem) -> [ArchivedFile] {
+        guard !item.isDir, let path = appModel.archiveRelativePath(item.path, for: model.bookmark) else { return [] }
+        return appModel.archivedFiles[path] ?? []
+    }
 
     private func activate(_ item: RemoteItem) {
         if item.isDir { model.open(item.path) } else { model.quickLook(item) }

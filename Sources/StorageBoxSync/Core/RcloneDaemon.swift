@@ -130,7 +130,7 @@ final class RcloneDaemon: @unchecked Sendable {
     /// Connection-string remote (`:sftp,host=…:`) – nothing is written to rclone.conf, passwords stay in memory.
     func fsBase(_ b: Bookmark) async throws -> String {
         func q(_ v: String) -> String { "\"" + v.replacingOccurrences(of: "\"", with: "\"\"") + "\"" }
-        var s = ":sftp,host=\(q(b.host)),user=\(q(b.user)),port=\(b.port),known_hosts_file=\(q(Paths.knownHosts)),shell_type=unix,idle_timeout=30m"
+        var s = ":sftp,host=\(q(b.host)),user=\(q(b.user)),port=\(b.port),known_hosts_file=\(q(Paths.knownHosts)),shell_type=\(b.usesRemoteShell ? "unix" : "none"),idle_timeout=30m"
         switch b.auth {
         case .key:
             s += ",key_file=\(q(b.keyFile))"

@@ -28,11 +28,16 @@ struct Transfer: Identifiable, Codable {
     var created = Date()
     var finished: Date?
     var jobID: Int?
+    var wasStarted = false
     /// Remote folder (fs + path) to refresh in open browsers when this finishes.
     var refreshKey: String?
 
     var fraction: Double? { totalBytes > 0 ? min(1, Double(bytes) / Double(totalBytes)) : nil }
     var isActive: Bool { state == .queued || state == .running }
+    var localDestination: String? {
+        guard kind == .download else { return nil }
+        return isDir ? dstFs : dstRemote.map { "/" + $0 }
+    }
 
     // The fs strings may contain an obscured password – never persist them.
     enum CodingKeys: String, CodingKey {
@@ -147,14 +152,24 @@ final class TransferManager: ObservableObject {
         var running = items.filter { $0.state == .running }.count
         for t in items.reversed() where t.state == .queued {   // oldest first
             guard running < maxConcurrent else { break }
-            start(t.id)
-            running += 1
+            if start(t.id) { running += 1 }
         }
         ensureTimer()
     }
 
-    private func start(_ id: UUID) {
-        guard let i = index(id) else { return }
+    @discardableResult
+    private func start(_ id: UUID) -> Bool {
+        guard let i = index(id) else { return false }
+        if items[i].kind == .download, !items[i].wasStarted,
+           let destination = items[i].localDestination,
+           FileManager.default.fileExists(atPath: destination) {
+            items[i].state = .failed
+            items[i].error = L("Download destination already exists: %@", destination)
+            items[i].finished = Date()
+            save()
+            return false
+        }
+        items[i].wasStarted = true
         items[i].state = .running
         items[i].bytes = 0
         let t = items[i]
@@ -178,6 +193,7 @@ final class TransferManager: ObservableObject {
                 finish(id, .failed, error.localizedDescription)
             }
         }
+        return true
     }
 
     private func ensureTimer() {

@@ -24,8 +24,20 @@ struct MainView: View {
             List(selection: $selection) {
                 Section("Servers") {
                     ForEach(model.bookmarks) { b in
-                        Label(b.displayName, systemImage: "server.rack")
-                            .tag(SidebarItem.server(b.id))
+                        Label {
+                            HStack {
+                                Text(b.displayName)
+                                if model.cfg.backupBookmarkID == b.id {
+                                    Spacer()
+                                    Image(systemName: "externaldrive.fill.badge.timemachine")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                        .help("Backup destination")
+                                }
+                            }
+                        } icon: {
+                            Image(systemName: "server.rack").foregroundStyle(.blue)
+                        }
+                        .tag(SidebarItem.server(b.id))
                             .contextMenu {
                                 Button("Edit…") { editing = EditingBookmark(bookmark: b, isNew: false) }
                                 Button("Duplicate") {
@@ -37,10 +49,9 @@ struct MainView: View {
                                 Button("Remove…", role: .destructive) { confirmDelete = b }
                             }
                     }
-                    Button { editing = EditingBookmark(bookmark: Bookmark(), isNew: true) } label: {
-                        Label("Add Server…", systemImage: "plus")
+                    if model.bookmarks.isEmpty {
+                        Text("No servers yet").foregroundStyle(.secondary)
                     }
-                    .buttonStyle(.borderless).foregroundStyle(.secondary)
                 }
                 Section {
                     Label {
@@ -53,21 +64,39 @@ struct MainView: View {
                                     .background(Color.accentColor, in: Capsule()).foregroundStyle(.white)
                             }
                         }
-                    } icon: { Image(systemName: "arrow.up.arrow.down") }
+                    } icon: { Image(systemName: "arrow.up.arrow.down").foregroundStyle(.purple) }
                     .tag(SidebarItem.transfers)
                 }
                 Section("Backup") {
-                    Label("Status", systemImage: model.isRunning ? "arrow.triangle.2.circlepath.icloud" : "externaldrive.badge.checkmark")
-                        .tag(SidebarItem.backupStatus)
-                    Label("Versions", systemImage: "clock.arrow.circlepath").tag(SidebarItem.backupVersions)
-                    Label("Backup Settings", systemImage: "gearshape").tag(SidebarItem.backupSettings)
+                    Label {
+                        Text("Status")
+                    } icon: {
+                        Image(systemName: BackupState(model).sidebarIcon).foregroundStyle(BackupState(model).tint)
+                    }
+                    .tag(SidebarItem.backupStatus)
+                    Label { Text("Versions") } icon: { Image(systemName: "clock.arrow.circlepath").foregroundStyle(.orange) }
+                        .tag(SidebarItem.backupVersions)
+                    Label { Text("Backup Settings") } icon: { Image(systemName: "gearshape").foregroundStyle(.gray) }
+                        .tag(SidebarItem.backupSettings)
                 }
             }
-            .navigationSplitViewColumnWidth(min: 200, ideal: 220)
+            .navigationSplitViewColumnWidth(min: 210, ideal: 230)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                HStack {
+                    Button { editing = EditingBookmark(bookmark: Bookmark(), isNew: true) } label: {
+                        Label("Add Server…", systemImage: "plus")
+                    }
+                    .buttonStyle(.borderless)
+                    Spacer()
+                }
+                .padding(.horizontal, 14).padding(.vertical, 10)
+                .overlay(alignment: .top) { Divider() }
+            }
         } detail: {
             detail
         }
-        .onAppear { if model.needsSetup && model.bookmarks.isEmpty { selection = .backupSettings } }
+        .onAppear { if model.shouldOfferOnboarding { model.showOnboarding = true } }
+        .sheet(isPresented: $model.showOnboarding) { OnboardingView().environmentObject(model) }
         .sheet(item: $editing) { e in BookmarkEditor(bookmark: e.bookmark, isNew: e.isNew).environmentObject(model) }
         .confirmationDialog("Remove this server?", isPresented: Binding(get: { confirmDelete != nil }, set: { if !$0 { confirmDelete = nil } })) {
             Button("Remove", role: .destructive) {
@@ -81,15 +110,15 @@ struct MainView: View {
         }
         .overlay(alignment: .bottom) {
             if let t = model.toast {
-                Text(t)
-                    .padding(.horizontal, 14).padding(.vertical, 8)
-                    .background(.regularMaterial, in: Capsule())
-                    .padding(.bottom, 16)
+                Toast(text: t)
+                    .padding(.bottom, 20)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                     .onAppear {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 4) { if model.toast == t { model.toast = nil } }
                     }
             }
         }
+        .animation(.spring(duration: 0.35), value: model.toast)
     }
 
     @ViewBuilder private var detail: some View {
@@ -103,11 +132,11 @@ struct MainView: View {
         case .transfers:
             TransfersView()
         case .backupVersions:
-            VersionsView().padding(12).navigationTitle(Text("Versions"))
+            VersionsView().padding(16).navigationTitle(Text("Versions"))
         case .backupSettings:
             SettingsView().navigationTitle(Text("Backup Settings"))
         case .backupStatus, nil:
-            OverviewView(openSettings: { selection = .backupSettings }).padding(12).navigationTitle(Text("Backup"))
+            OverviewView(openSettings: { selection = .backupSettings }).navigationTitle(Text("Backup"))
         }
     }
 }
@@ -121,16 +150,14 @@ struct Banner: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon).font(.title2).foregroundStyle(tint)
+            IconBadge(systemImage: icon, tint: tint, size: 30)
             VStack(alignment: .leading, spacing: 6) {
-                Text(title).bold()
+                Text(title).font(.headline)
                 Text(text).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                if let actions { actions }
+                if let actions { actions.padding(.top, 2) }
             }
             Spacer(minLength: 0)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+        .card(tint: tint, padding: 14)
     }
 }

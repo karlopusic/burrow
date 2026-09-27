@@ -269,3 +269,132 @@
 "Backup destination" = "Odredište backupa";
 "Add a server with SSH key authentication under Servers in the sidebar first." = "Prvo u bočnoj traci pod Serveri dodaj server s prijavom SSH ključem.";
 "Backups run unattended, so only servers that use an SSH key are listed. Edit connection details under Servers." = "Backup radi bez nadzora, pa su navedeni samo serveri koji koriste SSH ključ. Podatke za spajanje uređuješ pod Serveri.";
+
+/* 0.3.0 – host key verification */
+"Could not read the host keys of %@." = "Nije moguće pročitati ključeve servera %@.";
+"The server's identity has not been confirmed yet." = "Identitet servera još nije potvrđen.";
+"Confirm the server's identity" = "Potvrdi identitet servera";
+"This is the first connection to this server. To be sure you are talking to the real server and not an impostor, compare the fingerprint below with the one your provider publishes. They must match exactly." = "Ovo je prvo spajanje na ovaj server. Da budeš siguran da je to pravi server, a ne netko tko se lažno predstavlja, usporedi otisak ispod s onim koji objavljuje tvoj pružatelj usluge. Moraju biti potpuno jednaki.";
+"Hetzner publishes the fingerprints of its Storage Boxes in the Storage Box documentation." = "Hetzner objavljuje otiske svojih Storage Boxova u dokumentaciji za Storage Box.";
+"Only continue if the fingerprints match. The server is remembered in ~/.ssh/known_hosts, and every later connection is checked against it." = "Nastavi samo ako se otisci podudaraju. Server se pamti u ~/.ssh/known_hosts i svako se sljedeće spajanje provjerava prema tome.";
+"Trust This Server" = "Vjeruj ovom serveru";
+"This server hasn't been verified yet" = "Ovaj server još nije provjeren";
+"Before the first connection, confirm the server's fingerprint so nobody can impersonate it." = "Prije prvog spajanja potvrdi otisak servera, da se nitko ne može lažno predstaviti kao on.";
+"Verify Server…" = "Provjeri server…";
+"The server's identity has changed" = "Identitet servera se promijenio";
+"The server presents a different key than the one you trusted. This can mean someone is intercepting the connection. If your provider announced new keys, remove the old entry for this server from ~/.ssh/known_hosts and connect again." = "Server pokazuje drugi ključ od onog kojem si vjerovao. To može značiti da netko presreće vezu. Ako je pružatelj usluge najavio nove ključeve, ukloni stari unos za ovaj server iz ~/.ssh/known_hosts i spoji se ponovno.";
+
+/* 0.3.0 – setup assistant */
+"Open Setup Assistant" = "Otvori asistenta za postavljanje";
+"Set Up Later" = "Postavi kasnije";
+"Get Started" = "Započni";
+"Continue" = "Nastavi";
+"Finish" = "Završi";
+"Welcome to StorageBox Sync" = "Dobro došao u StorageBox Sync";
+"Back up a folder of your Mac to a Hetzner Storage Box – automatically, and without ever losing an old version." = "Backupiraj folder sa svog Maca na Hetzner Storage Box – automatski, i bez da ikad izgubiš staru verziju.";
+"Automatic backups" = "Automatski backup";
+"Runs on a schedule, even when the app is closed." = "Radi po rasporedu, čak i kad je aplikacija zatvorena.";
+"Nothing is lost" = "Ništa se ne gubi";
+"Changed and deleted files are kept in a versions folder on the box." = "Izmijenjene i obrisane datoteke čuvaju se u folderu verzija na boxu.";
+"Browse your box" = "Pregledaj svoj box";
+"Upload, download and manage files like in the Finder." = "Uploadaj, preuzimaj i upravljaj datotekama kao u Finderu.";
+"Where should backups go?" = "Kamo ide backup?";
+"Enter the login of your Storage Box. You find it in the Hetzner Console under Storage Boxes." = "Unesi korisničko ime svog Storage Boxa. Naći ćeš ga u Hetzner Consoleu pod Storage Boxes.";
+"Hetzner Storage Box" = "Hetzner Storage Box";
+"Other SFTP server" = "Drugi SFTP server";
+"Next, you'll confirm the server's fingerprint so nobody can impersonate it." = "Zatim ćeš potvrditi otisak servera, da se nitko ne može lažno predstaviti kao on.";
+"Sign in with an SSH key" = "Prijava SSH ključem";
+"Scheduled backups run while nobody is at the Mac, so they log in with a key instead of your password." = "Zakazani backup radi i kad nitko nije za Macom, pa se prijavljuje ključem umjesto lozinkom.";
+"Create a new key" = "Napravi novi ključ";
+"I already have a key" = "Već imam ključ";
+"Enter your Storage Box password once. A dedicated key is created on this Mac and added to the box. The password is not stored." = "Jednom unesi lozinku Storage Boxa. Na ovom Macu napravit će se zaseban ključ i dodati na box. Lozinka se ne sprema.";
+"Install Key" = "Instaliraj ključ";
+"SSH must be enabled for the Storage Box (Hetzner Console → Storage Box → Settings)." = "SSH mora biti uključen za Storage Box (Hetzner Console → Storage Box → Settings).";
+"The key must be in ~/.ssh/authorized_keys on the server and have no passphrase." = "Ključ mora biti u ~/.ssh/authorized_keys na serveru i ne smije imati lozinku.";
+"Check" = "Provjeri";
+"What should be backed up?" = "Što želiš backupirati?";
+"Choose a folder on this Mac. It is copied to a folder on the box and kept in sync." = "Odaberi folder na ovom Macu. Kopira se u folder na boxu i održava usklađenim.";
+"No folder chosen" = "Folder nije odabran";
+"Folder on the box" = "Folder na boxu";
+"Versions folder" = "Folder za verzije";
+"This folder on the box already contains %lld items." = "Ovaj folder na boxu već sadrži stavki: %lld.";
+"On the first backup, everything in it that isn't in your local folder is moved to the versions folder – nothing is deleted, but the folder will then match your Mac exactly." = "Pri prvom backupu sve što nije u tvom lokalnom folderu seli se u folder verzija – ništa se ne briše, ali će folder nakon toga biti točna kopija tvog Maca.";
+"I understand, use this folder" = "Razumijem, koristi ovaj folder";
+"Files you change or delete on the Mac are moved to the versions folder on the box instead of being overwritten, and kept there for %lld days." = "Datoteke koje na Macu izmijeniš ili obrišeš sele se u folder verzija na boxu umjesto da se prepišu, i ondje se čuvaju %lld dana.";
+"When should it run?" = "Kada da se pokreće?";
+"The backup runs in the background at this time. If the Mac is asleep or off, it runs as soon as it wakes up." = "Backup se pokreće u pozadini u to vrijeme. Ako Mac spava ili je ugašen, pokreće se čim se probudi.";
+"Full Disk Access needed" = "Potreban je Full Disk Access";
+"Scheduled backups can't read Desktop, Documents or Downloads until StorageBox Sync is allowed in System Settings → Privacy & Security → Full Disk Access." = "Zakazani backup ne može čitati Desktop, Documents ni Downloads dok StorageBox Sync ne dobije dozvolu u System Settings → Privacy & Security → Full Disk Access.";
+"You're all set" = "Sve je spremno";
+"We recommend a preview first: it lists what the first backup would upload, without changing anything." = "Preporučujemo prvo pregled promjena: pokazuje što bi prvi backup uploadao, bez ikakvih izmjena.";
+"Choose a subfolder on the Storage Box – the whole box can't be the backup folder, because everything else in it would be moved to the versions folder." = "Odaberi podfolder na Storage Boxu – cijeli box ne može biti folder za backup, jer bi se sve ostalo na njemu preselilo u folder verzija.";
+"The versions folder must be outside the backup folder." = "Folder za verzije mora biti izvan foldera za backup.";
+
+/* 0.3.0 – redesigned screens */
+"No servers yet" = "Još nema servera";
+"Next backup: %@" = "Sljedeći backup: %@";
+"Your backup is up to date" = "Backup je ažuran";
+"Backup overdue" = "Backup kasni";
+"Backup blocked for safety" = "Backup blokiran radi sigurnosti";
+"The last backup failed" = "Zadnji backup nije uspio";
+"The last backup was stopped" = "Zadnji backup je zaustavljen";
+"Started %@" = "Pokrenut %@";
+"Run the first backup now – or preview what it would upload." = "Pokreni prvi backup sada – ili prvo pogledaj što bi uploadao.";
+"Next backup" = "Sljedeći backup";
+"Off" = "Isključeno";
+"Storage Box" = "Storage Box";
+"%@ of %@" = "%@ od %@";
+"%@ free" = "%@ slobodno";
+"Old versions" = "Stare verzije";
+"%lld days" = "%lld dana";
+"Changed and deleted files are kept" = "Čuvaju se izmijenjene i obrisane datoteke";
+"No archived versions yet" = "Još nema arhiviranih verzija";
+"When you change or delete a file, the previous copy is kept here for %lld days." = "Kad izmijeniš ili obrišeš datoteku, prethodna kopija čuva se ovdje %lld dana.";
+"Drop to upload into %@" = "Pusti za upload u %@";
+"Can't show this folder" = "Nije moguće prikazati ovaj folder";
+"Try Again" = "Pokušaj ponovno";
+"Enter the address and login of your SFTP server." = "Unesi adresu i korisničko ime svog SFTP servera.";
+"Enter your account password once. A dedicated key is created on this Mac and added to the server. The password is not stored." = "Jednom unesi lozinku računa. Na ovom Macu napravit će se zaseban ključ i dodati na server. Lozinka se ne sprema.";
+
+/* Language */
+"Language" = "Jezik";
+"The new language is used after the app restarts." = "Novi jezik koristi se nakon ponovnog pokretanja aplikacije.";
+"Restart Now" = "Ponovno pokreni";
+
+/* Provider-neutral setup */
+"Back up a folder of your Mac to an SFTP storage server – automatically, with previous versions kept safely." = "Automatski sigurnosno kopiraj mapu s Maca na SFTP poslužitelj, uz sigurno čuvanje prethodnih verzija.";
+"The server must accept this key for unattended backups, and the key must have no passphrase." = "Poslužitelj mora prihvaćati ovaj ključ za automatske sigurnosne kopije, a ključ ne smije imati lozinku.";
+"Choose a folder on this Mac. It is copied to a folder on the server and kept in sync." = "Odaberi mapu na ovom Macu. Kopira se u mapu na poslužitelju i održava usklađenom.";
+"Backup folder on server" = "Mapa sigurnosne kopije na poslužitelju";
+"Versions folder on server" = "Mapa verzija na poslužitelju";
+"This server folder already contains %lld items." = "Ova mapa na poslužitelju već sadrži %lld stavki.";
+"On the first backup, everything in it that isn't in your local folder is moved to the versions folder. The backup folder will then match your Mac exactly." = "Pri prvoj sigurnosnoj kopiji sve što nije u lokalnoj mapi premješta se u mapu verzija. Nakon toga mapa sigurnosne kopije odgovarat će mapi na Macu.";
+"Allow remote shell commands for checksums" = "Dopusti naredbe ljuske na poslužitelju za kontrolne zbrojeve";
+"Folder paths cannot contain dot or parent-directory segments." = "Putanje mapa ne smiju sadržavati segmente za trenutačnu ili nadređenu mapu.";
+"Choose a dedicated backup subfolder on the server. The server root cannot be a backup folder." = "Odaberi zasebnu podmapu za sigurnosnu kopiju na poslužitelju. Korijenska mapa ne može biti mapa sigurnosne kopije.";
+"Choose a dedicated versions subfolder on the server." = "Odaberi zasebnu podmapu za verzije na poslužitelju.";
+"Download destination already exists: %@" = "Odredište za preuzimanje već postoji: %@";
+"Enter your SFTP server connection and choose the folder to back up." = "Unesi podatke SFTP poslužitelja i odaberi mapu za sigurnosnu kopiju.";
+"Server storage" = "Prostor na poslužitelju";
+"Quota unavailable on this server" = "Podaci o prostoru nisu dostupni na ovom poslužitelju";
+
+/* File history */
+"Show previous versions" = "Prikaži prethodne verzije";
+"Previous versions" = "Prethodne verzije";
+"Refresh version history" = "Osvježi povijest verzija";
+"Loading versions…" = "Učitavam verzije…";
+"Loading version history…" = "Učitavam povijest verzija…";
+"Open a copy" = "Otvori kopiju";
+"These are archived backup copies. Your current file is never replaced." = "Ovo su arhivirane sigurnosne kopije. Trenutačna datoteka neće biti zamijenjena.";
+"Could not load version history: %@" = "Nije moguće učitati povijest verzija: %@";
+
+/* About */
+"About StorageBox Sync…" = "O aplikaciji StorageBox Sync…";
+"Version %@" = "Verzija %@";
+"Made by PUSH" = "Izradio PUSH";
+"Open source under the MIT License. Includes rclone and Sparkle." = "Otvoreni kod pod licencijom MIT. Uključuje rclone i Sparkle.";
+"Check for Updates…" = "Provjeri ažuriranja…";
+"Changed and deleted files are kept in a versions folder on the server." = "Izmijenjene i obrisane datoteke čuvaju se u mapi verzija na poslužitelju.";
+"Files you change or delete on the Mac are moved to the versions folder on the server instead of being overwritten, and kept there for %lld days." = "Datoteke koje izmijeniš ili obrišeš na Macu premještaju se u mapu verzija na poslužitelju umjesto da se prepišu te se ondje čuvaju %lld dana.";
+"The backup folder becomes an exact mirror of the local folder. Changed or deleted files move to the versions folder instead of being overwritten." = "Mapa sigurnosne kopije postaje točno zrcalo lokalne mape. Izmijenjene ili obrisane datoteke premještaju se u mapu verzija umjesto da se prepišu.";
+"“upload” = a new or changed file goes to the server. “archive” = the old server copy moves to the versions folder." = "„upload” = nova ili izmijenjena datoteka prenosi se na poslužitelj. „archive” = stara kopija s poslužitelja premješta se u mapu verzija.";

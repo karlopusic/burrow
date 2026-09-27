@@ -5,7 +5,7 @@
 <h1 align="center">StorageBox Sync</h1>
 
 <p align="center">
-  A native macOS app for your <a href="https://www.hetzner.com/storage/storage-box/">Hetzner Storage Box</a> and other SFTP servers: a Cyberduck-style file browser, plus scheduled backups with version history — without ever deleting anything silently.
+  A native macOS app for SFTP storage servers: a file browser and scheduled backups with version history. Hetzner Storage Box is available as a setup preset.
 </p>
 
 <p align="center">
@@ -18,7 +18,7 @@
 
 ## Why
 
-A Storage Box is one of the cheapest ways to keep a terabyte of work off-site. What's missing is a
+An SFTP storage server is a practical place to keep work off-site. What's missing is a
 simple, trustworthy way for a Mac user to *use* it as a backup:
 
 - **Plain sync is not a backup.** Delete a folder by accident (or get hit by ransomware) and a naive
@@ -38,7 +38,8 @@ questions that matter: *When was my last good backup? What changed? Can I get th
 - **Browse** in list or icon view, sort by name/date/size/kind, path bar, back/forward, hidden files toggle,
   **recursive search**.
 - **Quick Look** any remote file with the space bar.
-- **Drag & drop upload** of files and whole folders from Finder; **download** to Downloads or any folder.
+- **Drag & drop upload** of files and whole folders from Finder; right-click to download one file, a selection, or a folder to a location you choose.
+- **File history in the browser** for files in the configured backup: preview, open a local copy, or download an archived version.
 - **Transfer queue** with live progress, speed and ETA, pause/resume, cancel, retry and history.
 - **File management**: new folder, rename, duplicate, cut/copy/paste, Get Info (incl. folder size), copy path.
 - **Safe delete**: "Move to Trash" moves items into a dated trash folder on the server, and **Put Back**
@@ -59,11 +60,11 @@ questions that matter: *When was my last good backup? What changed? Can I get th
 - **Preview changes** – a dry-run that lists exactly what would be uploaded and what would be archived.
 - **Restore** single files or whole versions into `~/Downloads` – your working folder is never overwritten.
 - **Live progress**, run history with per-run logs, macOS notifications, Storage Box quota.
-- **One-click SSH key setup** – enter your Storage Box password once; the app installs its own key and
+- **SSH key setup** – use an existing key, or install a dedicated key on a compatible server; the app
   never stores the password.
-- **Server-side checksums** – unchanged files are verified with `md5sum` on the box, so re-checking a
-  few hundred GB does not re-upload anything.
-- English and Croatian UI.
+- **Optional server-side checksums** – enable remote shell commands on servers that permit them. Generic SFTP connections work without an SSH shell.
+- **In-app updates** through Sparkle for signed public releases, with automatic checks and a manual check in About.
+- English, Croatian and German UI – English by default, switchable in Backup Settings → Language.
 
 ## How it works
 
@@ -82,7 +83,7 @@ Backups:
                                         (previous copies of changed + deleted files)
 ```
 
-Each run is `rclone sync <local> <remote> --backup-dir <versions>/<timestamp>` over SFTP (port 23).
+Each run is `rclone sync <local> <remote> --backup-dir <versions>/<unique-run-id>` over SFTP (the server's configured port).
 The app itself is a thin, auditable layer: configuration, scheduling, safety checks, log parsing and a UI.
 All state lives in:
 
@@ -99,26 +100,23 @@ All state lives in:
 
 1. Download the latest `StorageBox-Sync-x.y.z.dmg` from [Releases](../../releases) and drag the app to
    **Applications**.
-2. Open it. Current builds are ad-hoc signed – if macOS blocks the first launch, right-click the app →
-   **Open**.
+2. Open it. Development builds are ad-hoc signed; public release builds need Developer ID signing and notarization.
 3. Grant **Full Disk Access** (System Settings → Privacy & Security). Scheduled runs happen in the
    background, where macOS cannot show a permission prompt for protected folders such as Desktop or
    Documents.
 
-### Setting up the Storage Box
+### Setting up an SFTP server
 
-1. In Hetzner Console enable **SSH support** for the box. Note the server (`uXXXXXX.your-storagebox.de`)
-   and username (`uXXXXXX`).
-2. In the app → **Settings**: enter server and username (port `23`), open *First-time setup*, enter your
-   password and click **Install key**. Then **Test connection**.
-3. Choose the local folder, the destination folder (e.g. `/home/Projects`) and the versions folder
-   (e.g. `/home/_versions`). Save.
+1. Open the setup assistant. Enter the SFTP host, port and username. Hetzner users can select the
+   **Hetzner Storage Box** preset, which fills in its host format and port 23.
+2. Confirm the server fingerprint and choose an SSH key accepted by the server. Scheduled backups require
+   key authentication without a passphrase. The built-in key installer requires writable `~/.ssh/authorized_keys` on the server.
+3. Choose the local folder, a dedicated backup folder, and a separate versions folder. Save.
 4. Recommended: run **Preview changes** once, then **Back up now**.
-5. Recommended: also enable **automatic snapshots** for the box in Hetzner Console – an independent
-   second layer that protects against anything that goes wrong on the client side.
+5. If your provider offers server-side snapshots, enable them as an independent recovery layer.
 
-The first backup of an existing remote copy can take a while: every file is compared by checksum once.
-Later runs only look at what changed.
+The first backup of an existing remote copy can take a while. Servers with SSH shell access can use
+server-side checksums; otherwise rclone compares file size and modification time.
 
 ## Build from source
 
@@ -136,9 +134,11 @@ for what's planned.
 
 ## FAQ
 
-**Does it work with other SFTP servers?**
-Probably, as long as the server allows `md5sum` over SSH. It is built and tested against Hetzner Storage
-Boxes.
+**Does it work with other storage providers?**
+The app supports SFTP servers, including Storage Box services from other providers. Browsing accepts SSH key
+or password authentication. Unattended backups require SSH key authentication and server-side rename/move
+support for the version archive. Hetzner is the current end-to-end tested provider; other providers need
+compatibility testing before they are listed as verified.
 
 **Why rclone and not restic/Borg?**
 Those are excellent, but they store data in their own repository format. StorageBox Sync keeps a plain,

@@ -4,12 +4,14 @@
 
 - [ ] **Developer ID signing + notarization** – removes the Gatekeeper warning and keeps Full Disk Access
       across updates (ad-hoc signatures change on every build).
-- [ ] **UI polish pass** – works, but looks plain; give it a proper visual design before the public release.
+- [ ] **Rendered UI review** – inspect the current design in the running app at minimum window size, light/dark mode and all locales.
 - [ ] **Screenshots / short GIF** for the README.
 - [ ] **GitHub Actions**: build the DMG on tag push and attach it to a release.
-- [ ] **Onboarding flow** – a first-run assistant instead of pointing new users at Settings.
+- [ ] **Signed update rehearsal** – publish a notarized test release, prepare the EdDSA appcast, and install it from an older version.
+- [ ] **Other-provider backup check** – verify key login, version moves, restore and quota behavior on a non-Hetzner SFTP service.
+- [x] **Onboarding flow** – a first-run assistant instead of pointing new users at Settings.
 - [x] **Stop test** – interrupted uploads leave no partial files (backup + browser, covered by `--selftest`).
-- [ ] **Host-key fingerprint confirmation** during SSH key setup (currently trust-on-first-use).
+- [x] **Host-key fingerprint confirmation** before the first connection (key setup, test, browser).
 
 ## Next
 
@@ -21,7 +23,7 @@
 
 - [ ] Multiple backup jobs (several local folders → several remote folders).
 - [ ] Bandwidth limit and "only on power adapter / only on Wi-Fi X" options.
-- [ ] Automatic update check (Sparkle).
+- [x] Automatic update check (Sparkle); public installation awaits the signed update rehearsal above.
 - [ ] Weekly integrity check (`rclone check --download` on a random sample).
 - [ ] Email / webhook alert when no successful backup for N days.
 - [ ] Browse the live backup (not only archived versions) and restore from it.

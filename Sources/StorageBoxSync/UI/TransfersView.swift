@@ -7,15 +7,11 @@ struct TransfersView: View {
     var body: some View {
         VStack(spacing: 0) {
             if manager.items.isEmpty {
-                VStack(spacing: 8) {
-                    Spacer()
-                    Image(systemName: "arrow.up.arrow.down.circle").font(.largeTitle).foregroundStyle(.tertiary)
-                    Text("No transfers yet").foregroundStyle(.secondary)
+                ContentUnavailableView {
+                    Label("No transfers yet", systemImage: "arrow.up.arrow.down.circle")
+                } description: {
                     Text("Drag files into a server folder to upload, or right-click a file to download it.")
-                        .font(.callout).foregroundStyle(.tertiary)
-                    Spacer()
                 }
-                .frame(maxWidth: .infinity)
             } else {
                 List(manager.items) { t in TransferRow(t: t) }
                     .listStyle(.inset)
@@ -40,7 +36,7 @@ struct TransferRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: icon).font(.title2).foregroundStyle(tint).frame(width: 28)
+            IconBadge(systemImage: icon, tint: tint, size: 30)
             VStack(alignment: .leading, spacing: 3) {
                 HStack {
                     Text(t.name).bold().lineLimit(1).truncationMode(.middle)
@@ -106,8 +102,8 @@ struct TransferRow: View {
 
     private var icon: String {
         switch t.kind {
-        case .upload: return "arrow.up.circle.fill"
-        case .download: return "arrow.down.circle.fill"
+        case .upload: return "arrow.up"
+        case .download: return "arrow.down"
         case .copy: return "doc.on.doc.fill"
         }
     }
@@ -116,7 +112,7 @@ struct TransferRow: View {
         switch t.state {
         case .done: return .green
         case .failed: return .orange
-        case .cancelled, .paused: return .secondary
+        case .cancelled, .paused: return .gray
         default: return .accentColor
         }
     }

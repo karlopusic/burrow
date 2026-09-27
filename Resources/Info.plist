@@ -11,12 +11,15 @@
   <key>CFBundleShortVersionString</key><string>__VERSION__</string>
   <key>CFBundleVersion</key><string>__VERSION__</string>
   <key>CFBundleDevelopmentRegion</key><string>en</string>
-  <key>CFBundleLocalizations</key><array><string>en</string><string>hr</string></array>
+  <key>CFBundleLocalizations</key><array><string>en</string><string>hr</string><string>de</string></array>
+  <key>SUFeedURL</key><string>https://raw.githubusercontent.com/karlopusic/storagebox-sync/main/appcast.xml</string>
+  <key>SUPublicEDKey</key><string>vgtvPKfVBDRLwHIWjlKeY5xofxXajIOgaQSxq35aUw0=</string>
+  <key>SUVerifyUpdateBeforeExtraction</key><true/>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSDesktopFolderUsageDescription</key><string>StorageBox Sync reads the folder you chose so it can back it up to your Storage Box.</string>
   <key>NSDocumentsFolderUsageDescription</key><string>StorageBox Sync reads the folder you chose so it can back it up to your Storage Box.</string>
-  <key>NSHumanReadableCopyright</key><string>© 2026 Karlo Pušić · MIT License</string>
+  <key>NSHumanReadableCopyright</key><string>© 2026 PUSH · MIT License</string>
 </dict>
 </plist>
