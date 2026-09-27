@@ -117,10 +117,12 @@ final class BrowserModel: ObservableObject {
 
     func connect() async {
         guard fsRoot.isEmpty else { return }
+        if items.isEmpty && error == nil { loading = true }   // the handshake takes seconds: spinner, not "empty"
         do {
             fsRoot = try await RcloneDaemon.shared.fsBase(bookmark) + (absolute ? "/" : "")
             show(cwd)
         } catch {
+            loading = false
             self.error = error.localizedDescription
         }
     }

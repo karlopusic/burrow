@@ -12,6 +12,7 @@ struct TransfersView: View {
                 } description: {
                     Text("Drag files into a server folder to upload, or right-click a file to download it.")
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List(manager.items) { t in TransferRow(t: t) }
                     .listStyle(.inset)

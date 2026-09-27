@@ -44,6 +44,7 @@ struct BrowserView: View {
             }
             if model.inTrash { trashBar; Divider() }
             content
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .overlay { if dropTargeted { dropOverlay } }
                 .animation(.easeOut(duration: 0.15), value: dropTargeted)
                 .onDrop(of: [.fileURL], isTargeted: $dropTargeted) { providers in handleDrop(providers); return true }
@@ -248,6 +249,7 @@ struct BrowserView: View {
                     }
                 }
             }
+            .width(min: 160, ideal: 300)
             TableColumn("Modified", value: \.modifiedSort) { item in
                 Text(item.modified.map { Fmt.date.string(from: $0) } ?? "—").foregroundStyle(.secondary)
             }.width(min: 120, ideal: 150)
@@ -256,7 +258,7 @@ struct BrowserView: View {
             }.width(min: 60, ideal: 80)
             TableColumn("Kind", value: \.kind) { item in
                 Text(item.kind).foregroundStyle(.secondary).lineLimit(1)
-            }.width(min: 80, ideal: 120)
+            }.width(min: 70, ideal: 90)
         }
         .contextMenu(forSelectionType: RemoteItem.ID.self) { ids in
             menu(for: model.visibleItems.filter { ids.contains($0.id) })

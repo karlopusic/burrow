@@ -12,7 +12,8 @@ struct VersionsView: View {
                 HStack {
                     Text("Version archive").font(.headline)
                     Spacer()
-                    Button { model.loadVersions() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.borderless)
+                    Button { model.loadVersions() } label: { Image(systemName: "arrow.clockwise") }
+                        .buttonStyle(.borderless).help("Refresh")
                 }
                 if model.loadingVersions { ProgressView().frame(maxWidth: .infinity) }
                 if model.versions.isEmpty && !model.loadingVersions {
@@ -21,6 +22,7 @@ struct VersionsView: View {
                     } description: {
                         Text("When you change or delete a file, the previous copy is kept here for \(model.cfg.retentionDays) days.")
                     }
+                    .frame(maxHeight: .infinity)
                 } else {
                     List(model.versions, selection: $selected) { v in
                         Label {
@@ -37,7 +39,7 @@ struct VersionsView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 }
             }
-            .frame(minWidth: 220, maxWidth: 290)
+            .frame(minWidth: 220, maxWidth: 290, maxHeight: .infinity, alignment: .top)
             .padding(.trailing, 8)
 
             VStack(alignment: .leading, spacing: 8) {
@@ -70,8 +72,10 @@ struct VersionsView: View {
                     } description: {
                         Text("Restores go to ~/Downloads/StorageBox Sync Restore/ – your working folder is never touched.")
                     }
+                    .frame(maxHeight: .infinity)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(.leading, 8)
         }
         .onAppear { if model.versions.isEmpty && model.cfg.isComplete { model.loadVersions() } }

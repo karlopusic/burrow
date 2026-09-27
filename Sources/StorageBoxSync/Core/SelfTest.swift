@@ -48,6 +48,7 @@ enum SelfTest {
         b.name = "selftest"; b.host = args[0]; b.port = port; b.user = args[2]; b.keyFile = args[3]
         b.path = root
         b.trashFolder = root + "/.trash"
+        defer { UserDefaults.standard.removeObject(forKey: "lastPath.\(b.id.uuidString)") }   // shared with the real app
 
         // local fixtures
         let local = FileManager.default.temporaryDirectory.appendingPathComponent("sbs-selftest-\(UUID().uuidString)")

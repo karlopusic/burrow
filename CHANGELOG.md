@@ -20,6 +20,9 @@ Setup assistant, host-key verification and a visual redesign.
 - **German translation**, and a language picker (English / Hrvatski / Deutsch) in Backup Settings. The app now
   starts in English by default instead of following the system language; scheduled runs use the same choice.
 - Dev instances started with `CFFIXED_USER_HOME` use their own LaunchAgent label.
+- Fixes from the rendered UI review: the browser shows a spinner instead of "This folder is empty" while
+  connecting; browser, Transfers and Versions fill the window instead of floating mid-window when empty;
+  wider Name column at the minimum window size; `--selftest` no longer leaves a `lastPath` default behind.
 
 ## 0.2.1 – 2026-09-26
 

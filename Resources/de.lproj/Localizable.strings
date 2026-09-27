@@ -297,7 +297,7 @@
 "Nothing is lost" = "Nichts geht verloren";
 "Changed and deleted files are kept in a versions folder on the box." = "Geänderte und gelöschte Dateien werden in einem Versionsordner auf der Box aufbewahrt.";
 "Browse your box" = "Deine Box durchsuchen";
-"Upload, download and manage files like in the Finder." = "Dateien hochladen, laden und verwalten wie im Finder.";
+"Upload, download and manage files like in the Finder." = "Dateien hochladen, herunterladen und verwalten wie im Finder.";
 "Where should backups go?" = "Wohin sollen die Backups?";
 "Enter the login of your Storage Box. You find it in the Hetzner Console under Storage Boxes." = "Gib den Benutzernamen deiner Storage Box ein. Du findest ihn in der Hetzner Console unter „Storage Boxes“.";
 "Hetzner Storage Box" = "Hetzner Storage Box";
