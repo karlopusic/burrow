@@ -86,6 +86,7 @@ enum Runner {
                  "--backup-dir", "\(cfg.versionsRemote)/\(stamp)",
                  "--max-delete", String(cfg.maxDelete),
                  "--checkers", "8", "--transfers", "4",
+                 "--local-unicode-normalization",          // upload names in NFC, never a second NFD spelling
                  "--retries", "3", "--low-level-retries", "10",
                  "--stats", "5s", "--log-level", "INFO", "--log-file", logFile]
         for x in cfg.excludes + builtinExcludes { a += ["--exclude", x] }
@@ -120,7 +121,11 @@ enum Runner {
             return finish(.error, L("Errors (%ld): %@", sum.errors, why))
         }
         if !dryRun { pruneVersions(cfg) }
-        return finish(.ok, dryRun ? L("Preview finished.") : L("Backup successful."))
+        let done = dryRun ? L("Preview finished.") : L("Backup successful.")
+        if let first = sum.duplicates.first {
+            return finish(.ok, done + " " + L("Names that exist twice on the server with differently encoded letters: %ld (e.g. “%@”). One copy of each is skipped – see the log.", sum.duplicates.count, first))
+        }
+        return finish(.ok, done)
     }
 
     static let stampFormatter: DateFormatter = {

@@ -40,6 +40,7 @@ final class RcloneDaemon: @unchecked Sendable {
                        "--rc-addr", "127.0.0.1:\(port)",
                        "--rc-user", user, "--rc-pass", pass,
                        "--rc-job-expire-duration", "10m",
+                       "--local-unicode-normalization",   // uploads use NFC names, like the backup
                        "--config", Paths.rcloneConf,
                        "--log-file", Paths.logs + "/rcd.log", "--log-level", "NOTICE",
                        "--retries", "3", "--low-level-retries", "10"]

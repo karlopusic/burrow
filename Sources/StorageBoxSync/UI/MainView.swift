@@ -27,7 +27,7 @@ struct MainView: View {
                         Label {
                             HStack {
                                 Text(b.displayName)
-                                if model.cfg.backupBookmarkID == b.id {
+                                if model.cfg.isBackupServer(b) {
                                     Spacer()
                                     Image(systemName: "externaldrive.fill.badge.timemachine")
                                         .font(.caption).foregroundStyle(.secondary)

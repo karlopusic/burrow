@@ -47,7 +47,7 @@ using it. The public signing and update process is in [RELEASING.md](RELEASING.m
 
 ## Self-test (browser + transfers)
 
-Runs 30 checks against a real SFTP server inside a random `_sbs_selftest_<n>` folder that it creates and
+Runs 33 checks against a real SFTP server inside a random `_sbs_selftest_<n>` folder that it creates and
 removes again (uploads, conflicts, rename, move, trash / put back, Quick Look, downloads, cancel cleanup):
 
 ```sh

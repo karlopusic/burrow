@@ -318,7 +318,7 @@ final class AppModel: ObservableObject {
 
     /// Browser paths are relative to the login folder, except bookmarks rooted at an absolute path.
     func archiveRelativePath(_ itemPath: String, for bookmark: Bookmark) -> String? {
-        guard cfg.backupBookmarkID == bookmark.id else { return nil }
+        guard cfg.isBackupServer(bookmark) else { return nil }
         let root: String
         if !cfg.remotePath.hasPrefix("/") || bookmark.path.hasPrefix("/") {
             root = cfg.remotePath.trimmingCharacters(in: CharacterSet(charactersIn: "/"))

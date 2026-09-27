@@ -109,6 +109,23 @@ enum SelfTest {
         check(m.error != nil && m.items.first { $0.name == "report.txt" }?.size == 6, "rename refuses to overwrite")
         m.error = nil
 
+        // Unicode: NFD names (s + combining caron) are stored as NFC, and both spellings count as one name.
+        // String == treats the two as equal, so compare scalars.
+        func stored(_ name: String) -> Bool { m.items.contains { $0.name.unicodeScalars.elementsEqual(name.nfc.unicodeScalars) } }
+        let nfdFile = "Izvjes\u{030C}taj.txt"
+        try? "u".write(to: local.appendingPathComponent(nfdFile), atomically: true, encoding: .utf8)
+        m.upload([local.appendingPathComponent(nfdFile)], choose: { _ in .skip })
+        await waitTransfers(); await m.reload()
+        check(stored(nfdFile), "upload stores an NFD file name as NFC")
+        m.newFolder("Obic\u{030C}na mapa")
+        await waitIdle(m)
+        check(stored("Obic\u{030C}na mapa"), "new folder stores an NFD name as NFC")
+        m.newFolder("Obična mapa")
+        await waitIdle(m)
+        check(m.error != nil && m.items.filter { $0.name.nfc == "Obična mapa" }.count == 1,
+              "new folder refuses the other spelling of an existing name")
+        m.error = nil
+
         // duplicate
         if let f = m.items.first(where: { $0.name == "renamed.txt" }) { m.duplicate([f]) }
         await waitTransfers(); await m.reload()

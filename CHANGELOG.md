@@ -23,6 +23,15 @@ Setup assistant, host-key verification and a visual redesign.
 - Fixes from the rendered UI review: the browser shows a spinner instead of "This folder is empty" while
   connecting; browser, Transfers and Versions fill the window instead of floating mid-window when empty;
   wider Name column at the minimum window size; `--selftest` no longer leaves a `lastPath` default behind.
+- Backups set up before server bookmarks existed show their real connection in Backup Settings instead of
+  "Choose…", and Settings names the servers left out because they use a password.
+- Version-history markers appear for every saved server on the backup's account (same host, port and user),
+  not only the explicitly linked one.
+- The Keychain password is read once per launch instead of on every connection (one prompt instead of several).
+- File names are uploaded in Unicode NFC (backup and browser). A letter like "š" can be stored as one character
+  or as "s" + a combining caron; the server treats those as two different names, which left folders on the box
+  twice (and rclone skipping one copy of each). Conflict checks treat both spellings as the same name, and a
+  backup that meets such a pair on the server now says so in its result.
 
 ## 0.2.1 – 2026-09-26
 

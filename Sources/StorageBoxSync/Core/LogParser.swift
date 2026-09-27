@@ -60,7 +60,10 @@ enum LogParser {
         return p
     }
 
-    struct Summary { var uploaded = 0, archived = 0, modtime = 0, errors = 0, bytes = "", lastError = "" }
+    struct Summary {
+        var uploaded = 0, archived = 0, modtime = 0, errors = 0, bytes = "", lastError = ""
+        var duplicates: [String] = []   // server paths that exist twice (NFC + NFD spelling); rclone skips one copy
+    }
 
     static func summarize(_ logFile: String, dryRun: Bool) -> Summary {
         var s = Summary()
@@ -76,6 +79,10 @@ enum LogParser {
                 else if l.contains("Updated modification time in destination") { s.modtime += 1 }
             }
             if l.contains(" ERROR ") { s.errors += 1; s.lastError = l }
+            if let r = l.range(of: ": Duplicate "), l.contains("found in destination"),
+               let start = l.range(of: "NOTICE: ", options: [], range: l.startIndex..<r.lowerBound) {
+                s.duplicates.append(String(l[start.upperBound..<r.lowerBound]))
+            }
             let t = l.trimmingCharacters(in: .whitespaces)
             if t.hasPrefix("Transferred:") && t.contains("B /") {
                 s.bytes = t.dropFirst("Transferred:".count).trimmingCharacters(in: .whitespaces)

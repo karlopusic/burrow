@@ -94,10 +94,20 @@ struct SettingsView: View {
             Picker("Server", selection: Binding(
                 get: { draft.backupBookmarkID },
                 set: { id in if let b = model.bookmarks.first(where: { $0.id == id }) { draft.use(b) } })) {
-                Text("Choose…").tag(UUID?.none)
+                if draft.backupBookmarkID == nil && draft.isConnectionConfigured {
+                    // set up before servers existed: keep showing the connection the backup really uses
+                    Text(verbatim: "\(draft.user)@\(draft.host)").tag(UUID?.none)
+                } else {
+                    Text("Choose…").tag(UUID?.none)
+                }
                 ForEach(usable) { b in Text(b.displayName).tag(UUID?.some(b.id)) }
             }
-            if usable.isEmpty {
+            let passwordOnly = model.bookmarks.filter { $0.auth != .key }
+            let passwordNames = passwordOnly.map(\.displayName).joined(separator: ", ")
+            if !passwordOnly.isEmpty {
+                Text("Backups run unattended and need an SSH key. Not listed because they use a password: \(passwordNames). To switch one to an SSH key, right-click it under Servers and choose Edit…")
+                    .font(.caption).foregroundStyle(.secondary)
+            } else if usable.isEmpty {
                 Text("Add a server with SSH key authentication under Servers in the sidebar first.")
                     .font(.caption).foregroundStyle(.secondary)
             } else {

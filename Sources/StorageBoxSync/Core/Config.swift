@@ -77,6 +77,14 @@ struct AppConfig: Codable, Equatable {
         remoteShell = b.usesRemoteShell
     }
 
+    /// The backup lands on this server's account: the linked bookmark, or any bookmark with the same host, port
+    /// and user (configs from before bookmarks, or the same account saved with password login).
+    func isBackupServer(_ b: Bookmark) -> Bool {
+        if backupBookmarkID == b.id { return true }
+        return isConnectionConfigured && b.host.caseInsensitiveCompare(host) == .orderedSame
+            && b.port == port && b.user == user
+    }
+
     var isConnectionConfigured: Bool { !host.isEmpty && !user.isEmpty }
     var isComplete: Bool {
         isConnectionConfigured && !localPath.isEmpty && !remotePath.isEmpty

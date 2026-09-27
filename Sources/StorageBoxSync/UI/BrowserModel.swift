@@ -297,11 +297,11 @@ final class BrowserModel: ObservableObject {
 
     /// Conflict checks never trust the cache: a stale listing could let a move overwrite a file.
     private func names(in dir: String) async throws -> Set<String> {
-        Set(try await list(dir).map(\.name))
+        Set(try await list(dir).map(\.name.nfc))
     }
 
     func newFolder(_ name: String) {
-        let n = name.trimmingCharacters(in: .whitespaces)
+        let n = name.trimmingCharacters(in: .whitespaces).nfc
         guard !n.isEmpty, !n.contains("/") else { return }
         run(L("Creating folder…")) { [self] in
             guard !(try await names(in: cwd)).contains(n) else { throw RcloneError(message: L("“%@” already exists.", n)) }
@@ -311,11 +311,13 @@ final class BrowserModel: ObservableObject {
     }
 
     func rename(_ item: RemoteItem, to newName: String) {
-        let n = newName.trimmingCharacters(in: .whitespaces)
+        let n = newName.trimmingCharacters(in: .whitespaces).nfc
         guard !n.isEmpty, !n.contains("/"), n != item.name else { return }
         run(L("Renaming…")) { [self] in
             let parent = RPath.parent(item.path)
-            guard !(try await names(in: parent)).contains(n) else { throw RcloneError(message: L("“%@” already exists.", n)) }
+            // the item itself doesn't count, so an NFD name can be renamed to its NFC spelling
+            let others = try await list(parent).filter { $0.name != item.name }.map(\.name.nfc)
+            guard !others.contains(n) else { throw RcloneError(message: L("“%@” already exists.", n)) }
             try await move(item, to: RPath.join(parent, n))
         }
     }
@@ -530,13 +532,13 @@ final class BrowserModel: ObservableObject {
             for url in urls {
                 var isDir: ObjCBool = false
                 guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) else { continue }
-                var name = url.lastPathComponent
+                var name = url.lastPathComponent.nfc
                 if taken.contains(name) {
                     switch await choose(name) {
                     case .skip: continue
                     case .keepBoth: name = RPath.uniqueName(name, taken: taken)
                     case .replace:
-                        let existing = ((try? await list(dest)) ?? []).first { $0.name == name }
+                        let existing = ((try? await list(dest)) ?? []).first { $0.name.nfc == name }
                         if let existing {
                             do {
                                 try await trash([existing])

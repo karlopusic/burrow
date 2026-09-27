@@ -58,10 +58,10 @@ struct BrowserView: View {
         .onChange(of: model.cwd) { _, _ in selection.removeAll() }
         .task {
             await model.connect()
-            if appModel.cfg.backupBookmarkID == model.bookmark.id { appModel.ensureArchiveIndex() }
+            if appModel.cfg.isBackupServer(model.bookmark) { appModel.ensureArchiveIndex() }
         }
         .onChange(of: appModel.status.lastSuccess?.end) { _, _ in
-            if appModel.cfg.backupBookmarkID == model.bookmark.id { appModel.ensureArchiveIndex() }
+            if appModel.cfg.isBackupServer(model.bookmark) { appModel.ensureArchiveIndex() }
         }
         .quickLookPreview($model.quickLookURL)
         .alert("New Folder", isPresented: $showNewFolder) {
@@ -119,7 +119,7 @@ struct BrowserView: View {
             Menu {
                 Toggle("Show Hidden Files", isOn: $model.showHidden)
                 Button("Open Trash") { model.openTrash() }
-                if appModel.cfg.backupBookmarkID == model.bookmark.id {
+                if appModel.cfg.isBackupServer(model.bookmark) {
                     Button("Refresh version history") { appModel.ensureArchiveIndex(force: true) }
                 }
                 Divider()
@@ -181,7 +181,7 @@ struct BrowserView: View {
             if model.loading || model.refreshing || model.busy != nil || model.searching || model.pendingOps > 0 { ProgressView().controlSize(.small) }
             if let b = model.busy { Text(b) }
             else if model.searching { Text("Searching…") }
-            else if appModel.archiveIndexLoading && appModel.cfg.backupBookmarkID == model.bookmark.id {
+            else if appModel.archiveIndexLoading && appModel.cfg.isBackupServer(model.bookmark) {
                 Text("Loading version history…")
             }
             else if let r = model.searchResults { Text("\(r.count) results") }
@@ -192,7 +192,7 @@ struct BrowserView: View {
             } else if let e = model.error, HostKeys.problem(in: e) == nil {
                 Label(e, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange).lineLimit(1)
                 Button { model.error = nil } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.borderless)
-            } else if let e = appModel.archiveIndexError, appModel.cfg.backupBookmarkID == model.bookmark.id {
+            } else if let e = appModel.archiveIndexError, appModel.cfg.isBackupServer(model.bookmark) {
                 Label(e, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange).lineLimit(1)
                 Button("Retry") { appModel.ensureArchiveIndex(force: true) }.controlSize(.small)
             }

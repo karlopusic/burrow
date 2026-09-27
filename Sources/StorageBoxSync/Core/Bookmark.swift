@@ -53,7 +53,13 @@ enum BookmarkStore {
 enum Keychain {
     static let service = AppInfo.bundleID + ".sftp"
 
+    /// Read once per launch: every Keychain read can raise its own "wants to use your confidential information"
+    /// prompt (always, for ad-hoc signed builds), and one connection used to read it several times.
+    private static var cache: [UUID: String] = [:]
+    private static let lock = NSLock()
+
     static func set(_ password: String, for id: UUID) {
+        lock.withLock { cache[id] = password }
         let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
                                 kSecAttrService as String: service,
                                 kSecAttrAccount as String: id.uuidString]
@@ -65,22 +71,33 @@ enum Keychain {
     }
 
     static func get(_ id: UUID) -> String? {
+        lock.lock(); defer { lock.unlock() }      // held during the lookup, so parallel callers share one prompt
+        if let pw = cache[id] { return pw }
         let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
                                 kSecAttrService as String: service,
                                 kSecAttrAccount as String: id.uuidString,
                                 kSecReturnData as String: true,
                                 kSecMatchLimit as String: kSecMatchLimitOne]
         var out: AnyObject?
-        guard SecItemCopyMatching(q as CFDictionary, &out) == errSecSuccess, let d = out as? Data else { return nil }
-        return String(data: d, encoding: .utf8)
+        guard SecItemCopyMatching(q as CFDictionary, &out) == errSecSuccess, let d = out as? Data,
+              let pw = String(data: d, encoding: .utf8) else { return nil }
+        cache[id] = pw
+        return pw
     }
 
     static func delete(_ id: UUID) {
+        lock.withLock { cache[id] = nil }
         let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
                                 kSecAttrService as String: service,
                                 kSecAttrAccount as String: id.uuidString]
         SecItemDelete(q as CFDictionary)
     }
+}
+
+extension String {
+    /// Unicode NFC. Names are only ever written to the server in this form: the SFTP server treats the NFD spelling
+    /// of the same name as a different file, and rclone then ignores one of the two ("Duplicate … found").
+    var nfc: String { precomposedStringWithCanonicalMapping }
 }
 
 /// Paths inside a browser are always relative to the bookmark's fs root and use "/" as separator.
@@ -96,7 +113,9 @@ enum RPath {
         p.split(separator: "/").last.map(String.init) ?? p
     }
     /// "Report.pdf" → "Report 2.pdf", "Folder" → "Folder 2", avoiding names in `taken`.
+    /// Compares in NFC, so "š" typed as one character and as s + combining caron count as the same name.
     static func uniqueName(_ name: String, taken: Set<String>) -> String {
+        let name = name.nfc, taken = Set(taken.map(\.nfc))
         guard taken.contains(name) else { return name }
         let ext = (name as NSString).pathExtension
         let base = ext.isEmpty ? name : (name as NSString).deletingPathExtension
