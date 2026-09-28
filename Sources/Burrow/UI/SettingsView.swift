@@ -69,13 +69,18 @@ struct SettingsView: View {
             }
             Section("Permissions") {
                 HStack {
-                    Button("Open Full Disk Access") { model.openFullDiskAccess() }
-                    (model.localAccess ? Text("Local folder is readable ✓") : Text("No access to the local folder"))
-                        .foregroundStyle(model.localAccess ? Color.secondary : Color.orange)
+                    Button("Check access") { model.checkLocalAccess() }.disabled(model.checkingAccess)
+                    Button("Open Files and Folders") { model.openFilesAndFolders() }
+                    if model.checkingAccess {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        (model.localAccess ? Text("Local folder is readable ✓") : Text("No access to the local folder"))
+                            .foregroundStyle(model.localAccess ? Color.secondary : Color.orange)
+                    }
                 }
             }
             HStack {
-                Button("About StorageBox Sync…") { showAbout = true }
+                Button("About Burrow…") { showAbout = true }
                 Spacer()
                 Button("Revert") { load() }.disabled(current == model.cfg)
                 Button("Save") { model.saveConfig(current) }

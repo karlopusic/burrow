@@ -119,14 +119,16 @@ struct AppConfig: Codable, Equatable {
 
     /// rclone.conf is derived state – regenerated from config.json so the two can never drift apart.
     func writeRcloneConfig() {
+        // One value per line: a line break inside a field would otherwise start a new rclone option.
+        func line(_ s: String) -> String { s.components(separatedBy: .newlines).joined() }
         var conf = """
         [\(AppInfo.remoteName)]
         type = sftp
-        host = \(host)
+        host = \(line(host))
         port = \(port)
-        user = \(user)
-        key_file = \(keyFile)
-        known_hosts_file = \(Paths.knownHosts)
+        user = \(line(user))
+        key_file = \(line(keyFile))
+        known_hosts_file = \(line(Paths.knownHosts))
         shell_type = \(remoteShell ? "unix" : "none")
 
         """

@@ -1,11 +1,13 @@
 <p align="center">
-  <img src="docs/icon.png" width="128" alt="StorageBox Sync icon">
+  <img src="docs/icon.png" width="128" alt="Burrow icon">
 </p>
 
-<h1 align="center">StorageBox Sync</h1>
+<h1 align="center">Burrow</h1>
 
 <p align="center">
-  A native macOS app for SFTP storage servers: a file browser and scheduled backups with version history. Hetzner Storage Box is available as a setup preset.
+  Automatic Mac backups to any SFTP server – with every old version kept.<br>
+  A native macOS app with scheduled backups, version history and a file browser. Works with any SFTP server:
+  your own VPS or NAS, a hosting account, or a storage service such as Hetzner Storage Box (built-in preset).
 </p>
 
 <p align="center">
@@ -26,7 +28,7 @@ simple, trustworthy way for a Mac user to *use* it as a backup:
 - **Command-line tools work, but nobody checks them.** A cron job that silently failed three weeks ago
   looks exactly like one that works.
 
-StorageBox Sync wraps [rclone](https://rclone.org) in a small menu-bar app that answers the only
+Burrow wraps [rclone](https://rclone.org) in a small menu-bar app that answers the only
 questions that matter: *When was my last good backup? What changed? Can I get the old version back?*
 
 ## Features
@@ -69,7 +71,8 @@ questions that matter: *When was my last good backup? What changed? Can I get th
 ## How it works
 
 The browser talks to a local `rclone rcd` process started by the app: it listens on `127.0.0.1` only, on a
-random port with random per-session credentials, keeps SFTP connections open (so folders open quickly)
+random port with random per-session credentials (passed through the environment, so they never show up in the
+process list), keeps SFTP connections open (so folders open quickly)
 and runs uploads/downloads as jobs with live statistics. Folder listings are cached (bounded LRU, persisted
 in `~/Library/Caches`) and refreshed in the background, and subfolders are prefetched, so navigation is instant
 even on a slow connection; anything that could overwrite data re-checks the server first. Servers are passed to rclone as in-memory
@@ -89,21 +92,23 @@ All state lives in:
 
 | What | Where |
 |---|---|
-| Settings, run history, generated rclone config | `~/Library/Application Support/StorageBox Sync/` |
-| One log file per run | `~/Library/Logs/StorageBox Sync/` |
-| Schedule | `~/Library/LaunchAgents/hr.push.storageboxsync.plist` |
-| SSH key | `~/.ssh/storageboxsync_ed25519` |
-| Server bookmarks, transfer history | `~/Library/Application Support/StorageBox Sync/` |
-| Server trash | `<login folder>/.sbs-trash/<date>/…` (configurable per server) |
+| Settings, run history, generated rclone config | `~/Library/Application Support/Burrow/` |
+| One log file per run | `~/Library/Logs/Burrow/` |
+| Schedule | `~/Library/LaunchAgents/hr.push.burrow.plist` |
+| SSH key | `~/.ssh/burrow_ed25519` |
+| Server bookmarks, transfer history | `~/Library/Application Support/Burrow/` |
+| Server trash | `<login folder>/.burrow-trash/<date>/…` (configurable per server) |
 
 ## Install
 
-1. Download the latest `StorageBox-Sync-x.y.z.dmg` from [Releases](../../releases) and drag the app to
-   **Applications**.
-2. Open it. Development builds are ad-hoc signed; public release builds need Developer ID signing and notarization.
-3. Grant **Full Disk Access** (System Settings → Privacy & Security). Scheduled runs happen in the
-   background, where macOS cannot show a permission prompt for protected folders such as Desktop or
-   Documents.
+1. Download the latest `Burrow-x.y.z.dmg` from [Releases](../../releases) and drag the app to
+   **Applications**. If you open it straight from the disk image, the app offers to move itself there, because
+   scheduled backups need a permanent location.
+2. Open it. If macOS says it can't check the app for malicious software, open
+   System Settings → Privacy & Security and click **Open Anyway** (only needed once).
+3. When you choose a folder in Desktop, Documents, Downloads, iCloud Drive or on an external drive, macOS asks once
+   whether Burrow may read it. Click **Allow**. The app checks this the same way a scheduled backup
+   reads the folder, so you know it works before the first night. Full Disk Access is not needed.
 
 ### Setting up an SFTP server
 
@@ -120,12 +125,13 @@ server-side checksums; otherwise rclone compares file size and modification time
 
 ## Build from source
 
-Requirements: macOS 14+, Xcode or the Command Line Tools, `brew install rclone`.
+Requirements: macOS 14+, Xcode or the Command Line Tools. The build downloads pinned, checksum-verified
+releases of rclone and Sparkle.
 
 ```sh
-git clone https://github.com/karlopusic/storagebox-sync.git
-cd storagebox-sync
-scripts/build.sh                 # → dist/StorageBox-Sync-<version>.dmg (universal binary)
+git clone https://github.com/karlopusic/burrow.git
+cd burrow
+scripts/build.sh                 # → dist/Burrow-<version>.dmg (universal binary)
 ```
 
 `Package.swift` lets you open the project in Xcode for editing; the app bundle itself is assembled by
@@ -134,20 +140,35 @@ for what's planned.
 
 ## FAQ
 
-**Does it work with other storage providers?**
-The app supports SFTP servers, including Storage Box services from other providers. Browsing accepts SSH key
-or password authentication. Unattended backups require SSH key authentication and server-side rename/move
-support for the version archive. Hetzner is the current end-to-end tested provider; other providers need
-compatibility testing before they are listed as verified.
+**Which servers does it work with?**
+Any SFTP server that allows renaming files (needed for the version archive): your own Linux server or VPS,
+a NAS, a hosting account, or a storage service. Browsing accepts SSH key or password login; unattended backups
+need an SSH key. Every change is tested end to end against three different SFTP servers:
+
+| Server | Tested |
+|---|---|
+| OpenSSH (Linux, macOS Remote Login, most VPS and NAS) | browser, transfers, all backup scenarios |
+| Hetzner Storage Box | browser, transfers, all backup scenarios, daily use |
+| rclone's SFTP server | browser, transfers, all backup scenarios (on every push, in CI) |
+
+If you use it with another provider, a short note in the issues helps others.
 
 **Why rclone and not restic/Borg?**
-Those are excellent, but they store data in their own repository format. StorageBox Sync keeps a plain,
+Those are excellent, but they store data in their own repository format. Burrow keeps a plain,
 browsable copy of your files on the box – you can open any file from any machine without special tools.
 If you need encryption and deduplication, restic or Borg is the better choice.
 
 **Is my password stored?**
-No. It is used once to install an SSH key and is kept only in memory and in a temporary file that is
-deleted immediately afterwards.
+That depends on what you use it for:
+
+- *Installing an SSH key* (setup assistant): no. The password is used once. It's kept in memory and in a private
+  temporary file that is deleted right afterwards. Backups then log in with the key.
+- *Server bookmarks with password login* (file browser): yes, in the macOS Keychain, like Safari or Finder do.
+  It's never written to the app's own files or passed on a command line.
+
+**Does the app collect any data?**
+No. There's no analytics, no tracking and no account. The app only connects to the servers you add and, to check
+for updates, to this repository's update feed on GitHub.
 
 **What if I delete something by mistake?**
 The deleted files are moved into the versions folder on the next run and can be restored from the
@@ -156,7 +177,11 @@ backup is blocked until you confirm it.
 
 ## License
 
-MIT © 2026 [Karlo Pušić](https://push.hr). StorageBox Sync bundles rclone, which is MIT-licensed – see
+Burrow was called *StorageBox Sync* before version 0.4. Opening Burrow moves an existing installation over
+automatically (settings, history, logs, saved passwords and the schedule).
+
+
+MIT © 2026 [Karlo Pušić](https://push.hr). Burrow bundles rclone, which is MIT-licensed – see
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 Not affiliated with Hetzner Online GmbH.

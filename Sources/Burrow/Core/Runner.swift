@@ -1,7 +1,7 @@
 import Foundation
 import Darwin
 
-/// Headless backup / dry-run. Invoked as `StorageBoxSync --run` (launchd or GUI) or `--dry-run`.
+/// Headless backup / dry-run. Invoked as `Burrow --run` (launchd or GUI) or `--dry-run`.
 ///
 /// Safety model:
 ///  - `rclone sync --backup-dir`: files changed or deleted locally are moved into a dated folder under
@@ -73,7 +73,7 @@ enum Runner {
         }
         let count = countFiles(cfg.localPath, excludes: cfg.excludes + builtinExcludes)
         rec.localFiles = count
-        guard count >= 0 else { return finish(.error, L("No access to the local folder. Grant Full Disk Access.")) }
+        guard count >= 0 else { return finish(.error, L("No access to the local folder. Open the app and allow access to the folder.")) }
         guard count > 0 else { return finish(.blocked, L("The local folder is empty – backup blocked.")) }
         if !dryRun, let last = StatusStore.load().lastLocalCount,
            Double(count) < Double(last) * cfg.minFileRatio, !force {

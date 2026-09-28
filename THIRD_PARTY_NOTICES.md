@@ -1,7 +1,10 @@
-StorageBox Sync bundles the rclone binary (https://rclone.org), distributed under the following license:
+# Third-party notices
 
-The app also bundles Sparkle (https://sparkle-project.org), distributed under the MIT License.
-Its complete license is included as Sparkle-LICENSE in the app bundle.
+Burrow bundles the following software.
+
+## rclone
+
+https://rclone.org – bundled as `Contents/Resources/rclone`, distributed under the MIT License:
 
 Copyright (C) 2012 by Nick Craig-Wood http://www.craig-wood.com/nick/
 
@@ -22,3 +25,9 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+## Sparkle
+
+https://sparkle-project.org – bundled as `Contents/Frameworks/Sparkle.framework`, distributed under the MIT
+License. Its complete license, including the licenses of the components Sparkle itself contains, is included as
+`Contents/Resources/Sparkle-LICENSE` in the app bundle.

@@ -1,4 +1,4 @@
-# StorageBox Sync interaction contract
+# Burrow interaction contract
 
 CONTRIBUTING.md defines the data-safety rules. This file records where visible behavior is owned.
 

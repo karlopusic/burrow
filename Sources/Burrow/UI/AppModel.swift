@@ -53,7 +53,8 @@ final class AppModel: ObservableObject {
 
     init() {
         Paths.ensure()
-        migration = LegacyMigration.runIfNeeded()
+        migration = RenameMigration.runIfNeeded()
+        if migration == .none { migration = LegacyMigration.runIfNeeded() }
         cfg = AppConfig.load()
         if cfg.isConnectionConfigured { cfg.writeRcloneConfig() }
         loadBookmarks()
@@ -63,6 +64,7 @@ final class AppModel: ObservableObject {
             RcloneDaemon.shared.stop()
         }
         warmUp()
+        requestNotificationPermission()
         reload()
         installAgentWhenIdle()
         checkLocalAccess()
@@ -89,9 +91,46 @@ final class AppModel: ObservableObject {
         Task.detached { Agent.install(c) }
     }
 
+    /// Protected folders are checked the way a scheduled run reads them (through launchd), which also makes macOS
+    /// ask for permission if needed. Other folders only need to be readable.
     func checkLocalAccess() {
-        guard !cfg.localPath.isEmpty else { localAccess = true; return }
-        localAccess = (try? FileManager.default.contentsOfDirectory(atPath: cfg.localPath)) != nil
+        let path = cfg.localPath
+        guard !path.isEmpty else { localAccess = true; return }
+        guard cfg.isComplete, AccessCheck.isProtected(path), Install.canSchedule(installLocation) else {
+            localAccess = (try? FileManager.default.contentsOfDirectory(atPath: path)) != nil
+            return
+        }
+        checkingAccess = true
+        Task.detached {
+            let ok = AccessCheck.run()
+            await MainActor.run {
+                self.checkingAccess = false
+                // No answer in time (prompt left open) counts as "not yet allowed".
+                self.localAccess = ok == true
+            }
+        }
+    }
+
+    // MARK: install location
+
+    @Published var installLocation = Install.current
+    @Published var checkingAccess = false
+
+    /// Shown when scheduled backups can't work from where the app runs (DMG, translocated download).
+    var shouldOfferMove: Bool { !Install.canSchedule(installLocation) && !Install.isDevelopmentBuild }
+
+    /// Copies the app to Applications and reopens it from there. A running backup is a separate process and continues.
+    func moveToApplications() {
+        do {
+            let target = try Install.moveToApplications()
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/bin/sh")
+            p.arguments = ["-c", "while /bin/kill -0 \(getpid()) 2>/dev/null; do sleep 0.2; done; exec /usr/bin/open \"$0\"", target]
+            try p.run()
+            NSApp.terminate(nil)
+        } catch {
+            toast = L("Could not move the app: %@", error.localizedDescription)
+        }
     }
 
     // MARK: actions
@@ -157,8 +196,8 @@ final class AppModel: ObservableObject {
     func openLog(_ path: String) { NSWorkspace.shared.open(URL(fileURLWithPath: path)) }
     func openLogsFolder() { NSWorkspace.shared.open(URL(fileURLWithPath: Paths.logs)) }
     func openLocalFolder() { NSWorkspace.shared.open(URL(fileURLWithPath: cfg.localPath)) }
-    func openFullDiskAccess() {
-        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!)
+    func openFilesAndFolders() {
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders")!)
     }
 
     // MARK: bookmarks
@@ -404,7 +443,7 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// Restores into ~/Downloads/StorageBox Sync Restore/<version>/… – never into the live local folder.
+    /// Restores into ~/Downloads/Burrow Restore/<version>/… – never into the live local folder.
     func restore(version: VersionDir, file: RemoteFile?) {
         let base = "\(cfg.versionsRemote)/\(version.name)"
         let destRoot = "\(Paths.restoreRoot)/\(version.name)"

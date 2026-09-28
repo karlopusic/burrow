@@ -18,7 +18,7 @@ enum KeySetup {
         // 2. Dedicated key without passphrase (needed for unattended runs).
         if !fm.fileExists(atPath: keyFile) {
             let host = ProcessInfo.processInfo.hostName
-            let r = runCapture("/usr/bin/ssh-keygen", ["-t", "ed25519", "-N", "", "-q", "-C", "storagebox-sync@\(host)", "-f", keyFile])
+            let r = runCapture("/usr/bin/ssh-keygen", ["-t", "ed25519", "-N", "", "-q", "-C", "burrow@\(host)", "-f", keyFile])
             guard r.code == 0 else { return Outcome(ok: false, message: L("Could not create SSH key: %@", r.err)) }
         }
         guard let pub = try? String(contentsOfFile: keyFile + ".pub", encoding: .utf8)
@@ -30,12 +30,13 @@ enum KeySetup {
         let obscured = runCapture(Paths.rclone, ["obscure", "-"], stdin: password)
         guard obscured.code == 0 else { return Outcome(ok: false, message: lastErrorLine(obscured.err)) }
         let tmpConf = Paths.support + "/setup-\(UUID().uuidString).conf"
+        func line(_ s: String) -> String { s.components(separatedBy: .newlines).joined() }
         let conf = """
         [setup]
         type = sftp
-        host = \(host)
+        host = \(line(host))
         port = \(port)
-        user = \(user)
+        user = \(line(user))
         pass = \(obscured.out.trimmingCharacters(in: .whitespacesAndNewlines))
         known_hosts_file = \(Paths.knownHosts)
         shell_type = unix
@@ -51,13 +52,18 @@ enum KeySetup {
         }
         rclone(["mkdir", "setup:.ssh"], config: tmpConf)
         let existing = rclone(["cat", "setup:.ssh/authorized_keys"], config: tmpConf)
-        var keys = existing.code == 0 ? existing.out : ""
+        guard let current = existingKeys(existing) else {
+            // Any other failure (timeout, permissions) must not be mistaken for "no keys yet": uploading
+            // then would replace the file and lock the user out of every other key they had.
+            return Outcome(ok: false, message: L("Could not read the existing keys on the server: %@", lastErrorLine(existing.err)))
+        }
+        var keys = current
         let keyCore = pub.split(separator: " ").prefix(2).joined(separator: " ")
         if !keys.contains(keyCore) {
             if !keys.isEmpty && !keys.hasSuffix("\n") { keys += "\n" }
             keys += pub + "\n"
-            let tmpKeys = Paths.support + "/authorized_keys.tmp"
-            try? keys.write(toFile: tmpKeys, atomically: true, encoding: .utf8)
+            let tmpKeys = Paths.support + "/authorized_keys-\(UUID().uuidString).tmp"
+            fm.createFile(atPath: tmpKeys, contents: Data(keys.utf8), attributes: [.posixPermissions: 0o600])
             defer { try? fm.removeItem(atPath: tmpKeys) }
             let up = rclone(["copyto", tmpKeys, "setup:.ssh/authorized_keys"], config: tmpConf)
             guard up.code == 0 else {
@@ -65,5 +71,17 @@ enum KeySetup {
             }
         }
         return Outcome(ok: true, message: L("SSH key installed. The password is no longer needed."))
+    }
+
+    /// Content of the server's authorized_keys from `rclone cat`: "" only when the file (or .ssh) doesn't exist
+    /// (rclone exit 3 = directory not found, 4 = file not found), nil for every other failure.
+    static func existingKeys(_ r: ShellResult) -> String? {
+        switch r.code {
+        case 0: return r.out
+        case 3, 4: return ""
+        default:
+            let e = r.err.lowercased()
+            return e.contains("object not found") || e.contains("file does not exist") || e.contains("directory not found") ? "" : nil
+        }
     }
 }

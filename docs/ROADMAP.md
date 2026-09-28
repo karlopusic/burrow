@@ -2,13 +2,19 @@
 
 ## Before the first public release (0.x → 1.0)
 
-- [ ] **Developer ID signing + notarization** – removes the Gatekeeper warning and keeps Full Disk Access
-      across updates (ad-hoc signatures change on every build).
+- [ ] **Stable signing identity** – a self-signed certificate (free) keeps folder permissions and Keychain access
+      across updates; Developer ID + notarization (Apple Developer Program) also removes the "Open Anyway" step.
+- [ ] **Publish the GitHub repository** – the update feed (`SUFeedURL`) and the README links point there.
+- [x] **Universal rclone** – official pinned release for Apple silicon and Intel.
+- [x] **No Full Disk Access** – per-folder permission, verified through launchd.
+- [x] **Automated tests** – unit tests and local-SFTP integration tests in CI.
 - [ ] **Rendered UI review** – inspect the current design in the running app at minimum window size, light/dark mode and all locales.
 - [ ] **Screenshots / short GIF** for the README.
 - [ ] **GitHub Actions**: build the DMG on tag push and attach it to a release.
 - [ ] **Signed update rehearsal** – publish a notarized test release, prepare the EdDSA appcast, and install it from an older version.
-- [ ] **Other-provider backup check** – verify key login, version moves, restore and quota behavior on a non-Hetzner SFTP service.
+- [x] **Other-provider backup check** – OpenSSH (macOS Remote Login) and `rclone serve sftp` pass the full
+      integration suite (`OPENSSH_KEY=… scripts/integration.sh`); CI runs the latter on every push.
+- [ ] Try a Linux VPS and a Synology/QNAP NAS before the website launch (quota display, restricted shells).
 - [x] **Onboarding flow** – a first-run assistant instead of pointing new users at Settings.
 - [x] **Stop test** – interrupted uploads leave no partial files (backup + browser, covered by `--selftest`).
 - [x] **Host-key fingerprint confirmation** before the first connection (key setup, test, browser).

@@ -38,12 +38,14 @@ final class RcloneDaemon: @unchecked Sendable {
         p.executableURL = URL(fileURLWithPath: Paths.rclone)
         p.arguments = ["rcd",
                        "--rc-addr", "127.0.0.1:\(port)",
-                       "--rc-user", user, "--rc-pass", pass,
                        "--rc-job-expire-duration", "10m",
                        "--local-unicode-normalization",   // uploads use NFC names, like the backup
                        "--config", Paths.rcloneConf,
                        "--log-file", Paths.logs + "/rcd.log", "--log-level", "NOTICE",
                        "--retries", "3", "--low-level-retries", "10"]
+        // Credentials go through the environment: command-line arguments are visible to every user on the Mac
+        // (`ps`), and anyone holding them could drive this rclone – which runs with our files and SSH keys.
+        p.environment = Self.environment(user: user, pass: pass)
         p.standardOutput = FileHandle.nullDevice
         p.standardError = FileHandle.nullDevice
         try p.run()
@@ -62,6 +64,14 @@ final class RcloneDaemon: @unchecked Sendable {
         process?.terminate()
         process = nil
         try? FileManager.default.removeItem(atPath: Self.pidFile)
+    }
+
+    static func environment(user: String, pass: String,
+                            base: [String: String] = ProcessInfo.processInfo.environment) -> [String: String] {
+        var env = base.filter { !$0.key.hasPrefix("RCLONE_") }   // no inherited rclone settings or credentials
+        env["RCLONE_RC_USER"] = user
+        env["RCLONE_RC_PASS"] = pass
+        return env
     }
 
     /// An rcd left behind by a crashed session would keep a port and SFTP connections open.

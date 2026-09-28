@@ -15,7 +15,7 @@ struct Bookmark: Codable, Identifiable, Hashable {
     /// Start folder. Relative paths are relative to the login folder; absolute paths start at "/".
     var path = ""
     /// Folder (relative to the login folder) where "Delete" moves items.
-    var trashFolder = ".sbs-trash"
+    var trashFolder = ".burrow-trash"
     /// nil preserves the behavior of existing Hetzner bookmarks.
     var remoteShell: Bool? = nil
 
@@ -70,9 +70,11 @@ enum Keychain {
         SecItemAdd(add as CFDictionary, nil)
     }
 
-    static func get(_ id: UUID) -> String? {
+    /// `service` other than the default is only used to migrate items saved under the app's former name.
+    static func get(_ id: UUID, service: String = Keychain.service) -> String? {
         lock.lock(); defer { lock.unlock() }      // held during the lookup, so parallel callers share one prompt
-        if let pw = cache[id] { return pw }
+        let isDefault = service == Self.service
+        if isDefault, let pw = cache[id] { return pw }
         let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
                                 kSecAttrService as String: service,
                                 kSecAttrAccount as String: id.uuidString,
@@ -81,7 +83,7 @@ enum Keychain {
         var out: AnyObject?
         guard SecItemCopyMatching(q as CFDictionary, &out) == errSecSuccess, let d = out as? Data,
               let pw = String(data: d, encoding: .utf8) else { return nil }
-        cache[id] = pw
+        if isDefault { cache[id] = pw }
         return pw
     }
 

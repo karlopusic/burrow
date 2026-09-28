@@ -1,42 +1,16 @@
 #!/bin/zsh
-# Builds "StorageBox Sync.app" and a drag-to-install DMG into dist/.
+# Builds "Burrow.app" and a drag-to-install DMG into dist/.
 #   VERSION=1.1 scripts/build.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-NAME="StorageBox Sync"
-EXE="StorageBoxSync"
-BUNDLE_ID="hr.push.storageboxsync"
+NAME="Burrow"
+EXE="Burrow"
+BUNDLE_ID="hr.push.burrow"
 VERSION="${VERSION:-$(cat VERSION)}"
 APP="build/$NAME.app"
-SPARKLE_VERSION="2.10.0"
-SPARKLE_SHA256="c2bf58aa8387266ac179357b1415d6f2635f044da8be41042af32425dae6da0c"
-SPARKLE_DIR=".build/vendor/Sparkle-$SPARKLE_VERSION"
-SPARKLE_ARCHIVE=".build/vendor/Sparkle-$SPARKLE_VERSION.tar.xz"
 
-# Keep this pinned and checksum-verified. The custom swiftc build does not resolve Package.swift.
-if [[ ! -d "$SPARKLE_DIR/Sparkle.framework" ]]; then
-  mkdir -p "$SPARKLE_DIR"
-  curl -fL "https://github.com/sparkle-project/Sparkle/releases/download/$SPARKLE_VERSION/Sparkle-$SPARKLE_VERSION.tar.xz" -o "$SPARKLE_ARCHIVE"
-  ACTUAL_SHA256="$(shasum -a 256 "$SPARKLE_ARCHIVE" | awk '{print $1}')"
-  [[ "$ACTUAL_SHA256" == "$SPARKLE_SHA256" ]] || { echo "Sparkle archive checksum mismatch"; exit 1; }
-  tar -xf "$SPARKLE_ARCHIVE" -C "$SPARKLE_DIR"
-fi
-
-# macOS 27 SDK implements @State etc. as macros whose plugin ships only with full Xcode.
-# With Command Line Tools alone we compile against the newest 26.x SDK instead.
-if [[ -z "${SDKROOT:-}" ]]; then
-  if xcodebuild -version >/dev/null 2>&1; then
-    SDKROOT="$(xcrun --show-sdk-path)"
-  else
-    SDKROOT="$(ls -d /Library/Developer/CommandLineTools/SDKs/MacOSX26.*.sdk 2>/dev/null | sort -V | tail -1)"
-  fi
-fi
-echo "SDK: $SDKROOT"
-
-RCLONE="${RCLONE:-$(command -v rclone || true)}"
-[[ -n "$RCLONE" ]] || { echo "rclone not found – brew install rclone"; exit 1; }
-RCLONE="$(readlink -f "$RCLONE")"
+source scripts/toolchain.sh   # SDKROOT, pinned Sparkle and universal rclone
 
 rm -rf "$APP" "build/$EXE-arm64" "build/$EXE-x86_64" build/dmg dist
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" dist
@@ -67,12 +41,16 @@ chmod +x "$APP/Contents/Resources/rclone"
 sed -e "s/__VERSION__/$VERSION/g" -e "s/__BUNDLE_ID__/$BUNDLE_ID/g" -e "s/__EXE__/$EXE/g" \
   Resources/Info.plist > "$APP/Contents/Info.plist"
 
-# Ad-hoc signature. Replace "-" with a Developer ID identity (and notarize) for public releases.
+# Signing identity:
+#   "-" (default)             ad-hoc, for development. macOS treats every build as a new app.
+#   a self-signed certificate  stable identity without an Apple account: folder permissions and Keychain access
+#                              survive updates, but Gatekeeper still asks users to confirm the first launch.
+#   "Developer ID Application: …"  public release; signed with Hardened Runtime and notarized (RELEASING.md).
 SIGN_ID="${SIGN_ID:--}"
 SIGN_FLAGS=(--force --sign "$SIGN_ID")
-# Ad-hoc signatures have no Team ID, so library validation would reject the embedded Sparkle framework.
-# Developer ID releases retain Hardened Runtime for notarization.
-if [[ "$SIGN_ID" != "-" ]]; then SIGN_FLAGS+=(--options runtime --timestamp); fi
+# Hardened Runtime enforces library validation, which needs a Team ID on both the app and Sparkle – only Developer ID
+# certificates have one. Notarization requires it, so it is on exactly for Developer ID builds.
+if [[ "$SIGN_ID" == "Developer ID Application:"* ]]; then SIGN_FLAGS+=(--options runtime --timestamp); fi
 SPARKLE_B="$APP/Contents/Frameworks/Sparkle.framework/Versions/B"
 codesign "${SIGN_FLAGS[@]}" "$SPARKLE_B/XPCServices/Installer.xpc"
 codesign "${SIGN_FLAGS[@]}" --preserve-metadata=entitlements "$SPARKLE_B/XPCServices/Downloader.xpc"
@@ -86,9 +64,9 @@ codesign --verify --deep "$APP"
 STAGE=build/dmg; mkdir -p "$STAGE"
 cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
-hdiutil create -volname "$NAME" -srcfolder "$STAGE" -ov -format UDZO "dist/StorageBox-Sync-$VERSION.dmg" >/dev/null
+hdiutil create -volname "$NAME" -srcfolder "$STAGE" -ov -format UDZO "dist/Burrow-$VERSION.dmg" >/dev/null
 if [[ -n "${NOTARY_PROFILE:-}" ]]; then
-  xcrun notarytool submit "dist/StorageBox-Sync-$VERSION.dmg" --keychain-profile "$NOTARY_PROFILE" --wait
-  xcrun stapler staple "dist/StorageBox-Sync-$VERSION.dmg"
+  xcrun notarytool submit "dist/Burrow-$VERSION.dmg" --keychain-profile "$NOTARY_PROFILE" --wait
+  xcrun stapler staple "dist/Burrow-$VERSION.dmg"
 fi
-echo "OK → dist/StorageBox-Sync-$VERSION.dmg"
+echo "OK → dist/Burrow-$VERSION.dmg"

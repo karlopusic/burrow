@@ -3,7 +3,7 @@ import Foundation
 /// End-to-end test of the browser + transfer code paths against a real SFTP server, inside a throw-away
 /// folder that is created and removed by the test:
 ///
-///   StorageBoxSync --selftest <host> <port> <user> <keyfile>
+///   Burrow --selftest <host> <port> <user> <keyfile>
 ///
 /// Uses `_sbs_selftest_<random>` in the login folder; nothing else on the server is touched.
 @MainActor
@@ -211,11 +211,25 @@ enum SelfTest {
         let big = local.appendingPathComponent("big.bin")
         FileManager.default.createFile(atPath: big.path, contents: Data(count: 300 * 1024 * 1024))
         m.upload([big], choose: { _ in .skip })
-        try? await Task.sleep(nanoseconds: 6_000_000_000)
-        if let t = TransferManager.shared.items.first(where: { $0.name == "big.bin" }) { TransferManager.shared.cancel(t.id) }
+        // Cancel as soon as data flows: on a fast (local) server a fixed wait lets the upload finish first.
+        let started = Date()
+        var cancelledMidway = false
+        while Date().timeIntervalSince(started) < 60 {
+            if let t = TransferManager.shared.items.first(where: { $0.name == "big.bin" }) {
+                if t.state == .running && t.bytes > 0 { TransferManager.shared.cancel(t.id); cancelledMidway = true; break }
+                if t.state == .done { break }
+            }
+            try? await Task.sleep(nanoseconds: 20_000_000)
+        }
         try? await Task.sleep(nanoseconds: 4_000_000_000)
         let afterCancel = await names(m, root)
-        check(!afterCancel.contains { $0.hasSuffix(".partial") } && !afterCancel.contains("big.bin"), "cancel cleans up partial upload")
+        if cancelledMidway {
+            check(!afterCancel.contains { $0.hasSuffix(".partial") } && !afterCancel.contains("big.bin"), "cancel cleans up partial upload")
+        } else {
+            // Progress is polled once a second; an unthrottled local server finishes 300 MB before that.
+            print("SKIP  cancel cleans up partial upload (the upload finished before it could be cancelled – server too fast)")
+            check(!afterCancel.contains { $0.hasSuffix(".partial") }, "finished upload leaves no partial file")
+        }
 
         // empty trash
         m.emptyTrash(); await waitIdle(m)

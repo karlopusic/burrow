@@ -1,4 +1,4 @@
-/* StorageBox Sync – German. Keys are the English source strings. */
+/* Burrow – German. Keys are the English source strings. */
 
 /* Menu bar */
 "Stop" = "Stoppen";
@@ -20,11 +20,17 @@
 "Enter your Storage Box connection and choose the folder to back up." = "Gib die Verbindung zu deiner Storage Box ein und wähle den Ordner, der gesichert werden soll.";
 "Open Settings" = "Einstellungen öffnen";
 "Waiting for the previous app" = "Warte auf die vorherige App";
-"A backup started by SIM Backup is still running. Settings will be imported automatically once it finishes – reopen this app then." = "Ein von SIM Backup gestartetes Backup läuft noch. Die Einstellungen werden automatisch übernommen, sobald es fertig ist – öffne die App dann erneut.";
 "No access to the local folder" = "Kein Zugriff auf den lokalen Ordner";
-"Add StorageBox Sync in System Settings → Privacy & Security → Full Disk Access, then reopen the app. Scheduled backups can't read protected folders like Desktop without it." = "Füge StorageBox Sync unter Systemeinstellungen → Datenschutz & Sicherheit → Festplattenvollzugriff hinzu und öffne die App erneut. Ohne diese Berechtigung können geplante Backups geschützte Ordner wie den Schreibtisch nicht lesen.";
-"Open Full Disk Access" = "Festplattenvollzugriff öffnen";
+"Scheduled backups can't read this folder yet. Click “Check again” and allow access when macOS asks. If you chose “Don't Allow” before, turn Burrow on in System Settings → Privacy & Security → Files and Folders." = "Geplante Backups können diesen Ordner noch nicht lesen. Klicke auf „Erneut prüfen“ und erlaube den Zugriff, wenn macOS fragt. Falls du zuvor „Nicht erlauben“ gewählt hast, aktiviere Burrow unter Systemeinstellungen → Datenschutz & Sicherheit → Dateien und Ordner.";
+"Open Files and Folders" = "Dateien und Ordner öffnen";
 "Check again" = "Erneut prüfen";
+"Check access" = "Zugriff prüfen";
+"Move Burrow to Applications" = "Burrow in „Programme“ bewegen";
+"The app is running from the disk image or a temporary location. Scheduled backups need it in the Applications folder." = "Die App läuft vom Disk-Image oder von einem temporären Ort. Für geplante Backups muss sie im Ordner „Programme“ liegen.";
+"Move to Applications" = "In „Programme“ bewegen";
+"Could not move the app: %@" = "Die App konnte nicht bewegt werden: %@";
+"macOS will ask once whether Burrow may read this folder. Choose “Allow” so scheduled backups can read it." = "macOS fragt einmal, ob Burrow diesen Ordner lesen darf. Wähle „Erlauben“, damit geplante Backups ihn lesen können.";
+"Could not read the existing keys on the server: %@" = "Die vorhandenen Schlüssel auf dem Server konnten nicht gelesen werden: %@";
 
 /* Overview */
 "Last successful backup: %@" = "Letztes erfolgreiches Backup: %@";
@@ -69,7 +75,7 @@
 "Previous versions from %@" = "Frühere Versionen vom %@";
 "Restore selected" = "Auswahl wiederherstellen";
 "Restore all" = "Alle wiederherstellen";
-"Restores go to ~/Downloads/StorageBox Sync Restore/ – your working folder is never touched." = "Wiederhergestellte Dateien landen in ~/Downloads/StorageBox Sync Restore/ – dein Arbeitsordner wird nie verändert.";
+"Restores go to ~/Downloads/Burrow Restore/ – your working folder is never touched." = "Wiederhergestellte Dateien landen in ~/Downloads/Burrow Restore/ – dein Arbeitsordner wird nie verändert.";
 "File" = "Datei";
 "Modified" = "Geändert";
 "Select a version on the left" = "Wähle links eine Version";
@@ -129,7 +135,7 @@
 "Backup failed" = "Backup FEHLGESCHLAGEN";
 "Setup is not complete. Open Settings." = "Die Einrichtung ist nicht abgeschlossen. Öffne die Einstellungen.";
 "Local folder not found: %@" = "Lokaler Ordner nicht gefunden: %@";
-"No access to the local folder. Grant Full Disk Access." = "Kein Zugriff auf den lokalen Ordner. Erteile Festplattenvollzugriff.";
+"No access to the local folder. Open the app and allow access to the folder." = "Kein Zugriff auf den lokalen Ordner. Öffne die App und erlaube den Zugriff auf den Ordner.";
 "The local folder is empty – backup blocked." = "Der lokale Ordner ist leer – Backup blockiert.";
 "The local folder has %ld files, last time it had %ld. Backup blocked for safety – use “Run anyway” if this is intended." = "Der lokale Ordner enthält %ld Dateien, beim letzten Mal waren es %ld. Das Backup wurde zur Sicherheit blockiert – wähle „Trotzdem ausführen“, wenn das beabsichtigt ist.";
 "Could not start rclone: %@" = "rclone konnte nicht gestartet werden: %@";
@@ -275,7 +281,9 @@
 "The server's identity has not been confirmed yet." = "Die Identität des Servers wurde noch nicht bestätigt.";
 "Confirm the server's identity" = "Identität des Servers bestätigen";
 "This is the first connection to this server. To be sure you are talking to the real server and not an impostor, compare the fingerprint below with the one your provider publishes. They must match exactly." = "Dies ist die erste Verbindung zu diesem Server. Um sicherzugehen, dass du mit dem echten Server verbunden bist und nicht mit einem Betrüger, vergleiche den Fingerabdruck unten mit dem, den dein Anbieter veröffentlicht. Sie müssen exakt übereinstimmen.";
-"Hetzner publishes the fingerprints of its Storage Boxes in the Storage Box documentation." = "Hetzner veröffentlicht die Fingerabdrücke seiner Storage Boxen in der Storage-Box-Dokumentation.";
+"Hosting providers list the fingerprints in their documentation or control panel. For your own server, run “ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub” on it." = "Hosting-Anbieter nennen die Fingerabdrücke in ihrer Dokumentation oder im Kundenportal. Führe auf deinem eigenen Server „ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub“ aus.";
+"SFTP server" = "SFTP-Server";
+"Development build – updates are off." = "Entwicklungsversion – Updates sind deaktiviert.";
 "Only continue if the fingerprints match. The server is remembered in ~/.ssh/known_hosts, and every later connection is checked against it." = "Fahre nur fort, wenn die Fingerabdrücke übereinstimmen. Der Server wird in ~/.ssh/known_hosts gespeichert, und jede spätere Verbindung wird damit abgeglichen.";
 "Trust This Server" = "Diesem Server vertrauen";
 "This server hasn't been verified yet" = "Dieser Server wurde noch nicht überprüft";
@@ -290,7 +298,7 @@
 "Get Started" = "Los geht’s";
 "Continue" = "Fortfahren";
 "Finish" = "Fertig";
-"Welcome to StorageBox Sync" = "Willkommen bei StorageBox Sync";
+"Welcome to Burrow" = "Willkommen bei Burrow";
 "Back up a folder of your Mac to a Hetzner Storage Box – automatically, and without ever losing an old version." = "Sichere einen Ordner deines Mac auf einer Hetzner Storage Box – automatisch und ohne je eine alte Version zu verlieren.";
 "Automatic backups" = "Automatische Backups";
 "Runs on a schedule, even when the app is closed." = "Läuft nach Zeitplan, auch wenn die App geschlossen ist.";
@@ -323,8 +331,6 @@
 "Files you change or delete on the Mac are moved to the versions folder on the box instead of being overwritten, and kept there for %lld days." = "Dateien, die du auf dem Mac änderst oder löschst, werden in den Versionsordner auf der Box verschoben statt überschrieben und dort %lld Tage aufbewahrt.";
 "When should it run?" = "Wann soll es laufen?";
 "The backup runs in the background at this time. If the Mac is asleep or off, it runs as soon as it wakes up." = "Das Backup läuft zu dieser Zeit im Hintergrund. Ist der Mac im Ruhezustand oder ausgeschaltet, startet es, sobald er aufwacht.";
-"Full Disk Access needed" = "Festplattenvollzugriff erforderlich";
-"Scheduled backups can't read Desktop, Documents or Downloads until StorageBox Sync is allowed in System Settings → Privacy & Security → Full Disk Access." = "Geplante Backups können Schreibtisch, Dokumente und Downloads erst lesen, wenn StorageBox Sync unter Systemeinstellungen → Datenschutz & Sicherheit → Festplattenvollzugriff erlaubt ist.";
 "You're all set" = "Alles bereit";
 "We recommend a preview first: it lists what the first backup would upload, without changing anything." = "Wir empfehlen zuerst eine Vorschau: Sie zeigt, was das erste Backup hochladen würde, ohne etwas zu verändern.";
 "Choose a subfolder on the Storage Box – the whole box can't be the backup folder, because everything else in it would be moved to the versions folder." = "Wähle einen Unterordner auf der Storage Box – die ganze Box kann nicht der Backup-Ordner sein, weil sonst alles andere darauf in den Versionsordner verschoben würde.";
@@ -389,7 +395,7 @@
 "Could not load version history: %@" = "Versionsverlauf konnte nicht geladen werden: %@";
 
 /* About */
-"About StorageBox Sync…" = "Über StorageBox Sync …";
+"About Burrow…" = "Über Burrow …";
 "Version %@" = "Version %@";
 "Made by PUSH" = "Entwickelt von PUSH";
 "Open source under the MIT License. Includes rclone and Sparkle." = "Open Source unter der MIT-Lizenz. Enthält rclone und Sparkle.";
@@ -400,3 +406,6 @@
 "“upload” = a new or changed file goes to the server. “archive” = the old server copy moves to the versions folder." = "„Upload“ = eine neue oder geänderte Datei wird auf den Server übertragen. „Archiv“ = die alte Serverkopie wird in den Versionsordner verschoben.";
 "Backups run unattended and need an SSH key. Not listed because they use a password: %@. To switch one to an SSH key, right-click it under Servers and choose Edit…" = "Backups laufen unbeaufsichtigt und brauchen einen SSH-Schlüssel. Nicht aufgeführt, da sie ein Passwort verwenden: %@. Um einen auf SSH-Schlüssel umzustellen, klicke ihn unter „Server“ mit der rechten Maustaste an und wähle „Bearbeiten …“.";
 "Names that exist twice on the server with differently encoded letters: %ld (e.g. “%@”). One copy of each is skipped – see the log." = "Namen, die auf dem Server doppelt mit unterschiedlich kodierten Buchstaben vorkommen: %ld (z. B. „%@“). Je eine Kopie wird übersprungen – siehe Protokoll.";
+
+/* Rename to Burrow */
+"A backup started by the previous version of the app is still running. Settings will be imported automatically once it finishes – reopen this app then." = "Ein von der vorherigen Version der App gestartetes Backup läuft noch. Die Einstellungen werden automatisch übernommen, sobald es fertig ist – öffne die App dann erneut.";

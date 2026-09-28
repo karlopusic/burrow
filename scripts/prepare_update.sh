@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 VERSION="$(cat VERSION)"
-DMG="dist/StorageBox-Sync-$VERSION.dmg"
+DMG="dist/Burrow-$VERSION.dmg"
 SPARKLE_DIR=".build/vendor/Sparkle-2.10.0"
 STAGE=".build/update-feed-$VERSION"
 [[ -f "$DMG" ]] || { echo "Missing $DMG"; exit 1; }
@@ -13,9 +13,10 @@ STAGE=".build/update-feed-$VERSION"
 xcrun stapler validate "$DMG" >/dev/null
 mkdir -p "$STAGE"
 cp "$DMG" "$STAGE/"
+# The EdDSA key keeps the Keychain name from before the rename to Burrow; it matches SUPublicEDKey.
 "$SPARKLE_DIR/bin/generate_appcast" \
   --account hr.push.storageboxsync --maximum-deltas 0 \
-  --download-url-prefix "https://github.com/karlopusic/storagebox-sync/releases/download/v$VERSION/" \
+  --download-url-prefix "https://github.com/karlopusic/burrow/releases/download/v$VERSION/" \
   -o "$STAGE/appcast.xml" "$STAGE"
 python3 scripts/merge_appcast.py appcast.xml "$STAGE/appcast.xml" "$VERSION"
 echo "Prepared appcast.xml for v$VERSION. Publish the DMG before committing the feed."

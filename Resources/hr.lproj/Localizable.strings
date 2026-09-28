@@ -1,4 +1,4 @@
-/* StorageBox Sync – Croatian. Keys are the English source strings. */
+/* Burrow – Croatian. Keys are the English source strings. */
 
 /* Menu bar */
 "Stop" = "Zaustavi";
@@ -20,11 +20,17 @@
 "Enter your Storage Box connection and choose the folder to back up." = "Unesi podatke za Storage Box i odaberi folder koji želiš backupirati.";
 "Open Settings" = "Otvori postavke";
 "Waiting for the previous app" = "Čekam prethodnu aplikaciju";
-"A backup started by SIM Backup is still running. Settings will be imported automatically once it finishes – reopen this app then." = "Backup koji je pokrenuo SIM Backup još traje. Postavke će se automatski preuzeti kad završi – tada ponovno otvori ovu aplikaciju.";
 "No access to the local folder" = "Nema pristupa lokalnom folderu";
-"Add StorageBox Sync in System Settings → Privacy & Security → Full Disk Access, then reopen the app. Scheduled backups can't read protected folders like Desktop without it." = "Dodaj StorageBox Sync u System Settings → Privacy & Security → Full Disk Access, pa ponovno otvori aplikaciju. Bez toga zakazani backup ne može čitati zaštićene foldere poput Desktopa.";
-"Open Full Disk Access" = "Otvori Full Disk Access";
+"Scheduled backups can't read this folder yet. Click “Check again” and allow access when macOS asks. If you chose “Don't Allow” before, turn Burrow on in System Settings → Privacy & Security → Files and Folders." = "Zakazani backup još ne može čitati ovu mapu. Klikni „Provjeri ponovno“ i dopusti pristup kad macOS pita. Ako si prije odabrao „Don't Allow“, uključi Burrow u System Settings → Privacy & Security → Files and Folders.";
+"Open Files and Folders" = "Otvori Files and Folders";
 "Check again" = "Provjeri ponovno";
+"Check access" = "Provjeri pristup";
+"Move Burrow to Applications" = "Premjesti Burrow u Applications";
+"The app is running from the disk image or a temporary location. Scheduled backups need it in the Applications folder." = "Aplikacija je pokrenuta iz slike diska ili s privremene lokacije. Za zakazani backup mora biti u mapi Applications.";
+"Move to Applications" = "Premjesti u Applications";
+"Could not move the app: %@" = "Nije moguće premjestiti aplikaciju: %@";
+"macOS will ask once whether Burrow may read this folder. Choose “Allow” so scheduled backups can read it." = "macOS će jednom pitati smije li Burrow čitati ovu mapu. Odaberi „Allow“ da je zakazani backup može čitati.";
+"Could not read the existing keys on the server: %@" = "Nije moguće pročitati postojeće ključeve na serveru: %@";
 
 /* Overview */
 "Last successful backup: %@" = "Zadnji uspješan backup: %@";
@@ -69,7 +75,7 @@
 "Previous versions from %@" = "Stare verzije iz backupa %@";
 "Restore selected" = "Vrati odabranu";
 "Restore all" = "Vrati sve";
-"Restores go to ~/Downloads/StorageBox Sync Restore/ – your working folder is never touched." = "Vraćanje ide u ~/Downloads/StorageBox Sync Restore/ – tvoj radni folder se nikad ne dira.";
+"Restores go to ~/Downloads/Burrow Restore/ – your working folder is never touched." = "Vraćanje ide u ~/Downloads/Burrow Restore/ – tvoj radni folder se nikad ne dira.";
 "File" = "Datoteka";
 "Modified" = "Izmijenjeno";
 "Select a version on the left" = "Odaberi verziju lijevo";
@@ -129,7 +135,7 @@
 "Backup failed" = "Backup NIJE uspio";
 "Setup is not complete. Open Settings." = "Postavljanje nije dovršeno. Otvori postavke.";
 "Local folder not found: %@" = "Lokalni folder ne postoji: %@";
-"No access to the local folder. Grant Full Disk Access." = "Nema pristupa lokalnom folderu. Daj aplikaciji Full Disk Access.";
+"No access to the local folder. Open the app and allow access to the folder." = "Nema pristupa lokalnoj mapi. Otvori aplikaciju i dopusti pristup mapi.";
 "The local folder is empty – backup blocked." = "Lokalni folder je prazan – backup blokiran.";
 "The local folder has %ld files, last time it had %ld. Backup blocked for safety – use “Run anyway” if this is intended." = "Lokalno je %ld datoteka, a zadnji put %ld. Backup je blokiran radi sigurnosti – ako je to namjerno, klikni „Pokreni ipak“.";
 "Could not start rclone: %@" = "Ne mogu pokrenuti rclone: %@";
@@ -275,7 +281,9 @@
 "The server's identity has not been confirmed yet." = "Identitet servera još nije potvrđen.";
 "Confirm the server's identity" = "Potvrdi identitet servera";
 "This is the first connection to this server. To be sure you are talking to the real server and not an impostor, compare the fingerprint below with the one your provider publishes. They must match exactly." = "Ovo je prvo spajanje na ovaj server. Da budeš siguran da je to pravi server, a ne netko tko se lažno predstavlja, usporedi otisak ispod s onim koji objavljuje tvoj pružatelj usluge. Moraju biti potpuno jednaki.";
-"Hetzner publishes the fingerprints of its Storage Boxes in the Storage Box documentation." = "Hetzner objavljuje otiske svojih Storage Boxova u dokumentaciji za Storage Box.";
+"Hosting providers list the fingerprints in their documentation or control panel. For your own server, run “ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub” on it." = "Pružatelji usluge navode otiske u svojoj dokumentaciji ili upravljačkoj ploči. Za vlastiti server pokreni na njemu „ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub“.";
+"SFTP server" = "SFTP server";
+"Development build – updates are off." = "Razvojna verzija – ažuriranja su isključena.";
 "Only continue if the fingerprints match. The server is remembered in ~/.ssh/known_hosts, and every later connection is checked against it." = "Nastavi samo ako se otisci podudaraju. Server se pamti u ~/.ssh/known_hosts i svako se sljedeće spajanje provjerava prema tome.";
 "Trust This Server" = "Vjeruj ovom serveru";
 "This server hasn't been verified yet" = "Ovaj server još nije provjeren";
@@ -290,7 +298,7 @@
 "Get Started" = "Započni";
 "Continue" = "Nastavi";
 "Finish" = "Završi";
-"Welcome to StorageBox Sync" = "Dobro došao u StorageBox Sync";
+"Welcome to Burrow" = "Dobro došao u Burrow";
 "Back up a folder of your Mac to a Hetzner Storage Box – automatically, and without ever losing an old version." = "Backupiraj folder sa svog Maca na Hetzner Storage Box – automatski, i bez da ikad izgubiš staru verziju.";
 "Automatic backups" = "Automatski backup";
 "Runs on a schedule, even when the app is closed." = "Radi po rasporedu, čak i kad je aplikacija zatvorena.";
@@ -323,8 +331,6 @@
 "Files you change or delete on the Mac are moved to the versions folder on the box instead of being overwritten, and kept there for %lld days." = "Datoteke koje na Macu izmijeniš ili obrišeš sele se u folder verzija na boxu umjesto da se prepišu, i ondje se čuvaju %lld dana.";
 "When should it run?" = "Kada da se pokreće?";
 "The backup runs in the background at this time. If the Mac is asleep or off, it runs as soon as it wakes up." = "Backup se pokreće u pozadini u to vrijeme. Ako Mac spava ili je ugašen, pokreće se čim se probudi.";
-"Full Disk Access needed" = "Potreban je Full Disk Access";
-"Scheduled backups can't read Desktop, Documents or Downloads until StorageBox Sync is allowed in System Settings → Privacy & Security → Full Disk Access." = "Zakazani backup ne može čitati Desktop, Documents ni Downloads dok StorageBox Sync ne dobije dozvolu u System Settings → Privacy & Security → Full Disk Access.";
 "You're all set" = "Sve je spremno";
 "We recommend a preview first: it lists what the first backup would upload, without changing anything." = "Preporučujemo prvo pregled promjena: pokazuje što bi prvi backup uploadao, bez ikakvih izmjena.";
 "Choose a subfolder on the Storage Box – the whole box can't be the backup folder, because everything else in it would be moved to the versions folder." = "Odaberi podfolder na Storage Boxu – cijeli box ne može biti folder za backup, jer bi se sve ostalo na njemu preselilo u folder verzija.";
@@ -389,7 +395,7 @@
 "Could not load version history: %@" = "Nije moguće učitati povijest verzija: %@";
 
 /* About */
-"About StorageBox Sync…" = "O aplikaciji StorageBox Sync…";
+"About Burrow…" = "O aplikaciji Burrow…";
 "Version %@" = "Verzija %@";
 "Made by PUSH" = "Izradio PUSH";
 "Open source under the MIT License. Includes rclone and Sparkle." = "Otvoreni kod pod licencijom MIT. Uključuje rclone i Sparkle.";
@@ -400,3 +406,6 @@
 "“upload” = a new or changed file goes to the server. “archive” = the old server copy moves to the versions folder." = "„upload” = nova ili izmijenjena datoteka prenosi se na poslužitelj. „archive” = stara kopija s poslužitelja premješta se u mapu verzija.";
 "Backups run unattended and need an SSH key. Not listed because they use a password: %@. To switch one to an SSH key, right-click it under Servers and choose Edit…" = "Backup radi bez nadzora i treba SSH ključ. Nisu navedeni jer koriste lozinku: %@. Za prelazak na SSH ključ desnom tipkom klikni server pod Serveri i odaberi Uredi…";
 "Names that exist twice on the server with differently encoded letters: %ld (e.g. “%@”). One copy of each is skipped – see the log." = "Imena koja na serveru postoje dvaput s različito kodiranim slovima: %ld (npr. „%@“). Jedna kopija svakog se preskače – vidi zapisnik.";
+
+/* Rename to Burrow */
+"A backup started by the previous version of the app is still running. Settings will be imported automatically once it finishes – reopen this app then." = "Backup koji je pokrenula prethodna verzija aplikacije još traje. Postavke će se automatski preuzeti kad završi – tada ponovno otvori ovu aplikaciju.";

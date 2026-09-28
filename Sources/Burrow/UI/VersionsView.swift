@@ -56,7 +56,7 @@ struct VersionsView: View {
                         }
                         .buttonStyle(.borderedProminent)
                     }
-                    Text("Restores go to ~/Downloads/StorageBox Sync Restore/ – your working folder is never touched.")
+                    Text("Restores go to ~/Downloads/Burrow Restore/ – your working folder is never touched.")
                         .font(.caption).foregroundStyle(.secondary)
                     TextField("Search…", text: $filter).textFieldStyle(.roundedBorder)
                     if model.loadingFiles { ProgressView().frame(maxWidth: .infinity) }
@@ -70,7 +70,7 @@ struct VersionsView: View {
                     ContentUnavailableView {
                         Label("Select a version on the left", systemImage: "sidebar.left")
                     } description: {
-                        Text("Restores go to ~/Downloads/StorageBox Sync Restore/ – your working folder is never touched.")
+                        Text("Restores go to ~/Downloads/Burrow Restore/ – your working folder is never touched.")
                     }
                     .frame(maxHeight: .infinity)
                 }

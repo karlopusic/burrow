@@ -98,14 +98,19 @@ struct OverviewView: View {
         }
         if model.migration == .waitingForLegacyRun {
             Banner(icon: "hourglass", tint: .blue, title: "Waiting for the previous app",
-                   text: "A backup started by SIM Backup is still running. Settings will be imported automatically once it finishes – reopen this app then.")
+                   text: "A backup started by the previous version of the app is still running. Settings will be imported automatically once it finishes – reopen this app then.")
         }
-        if !model.localAccess {
+        if model.shouldOfferMove {
+            Banner(icon: "arrow.down.app.fill", tint: .orange, title: "Move Burrow to Applications",
+                   text: "The app is running from the disk image or a temporary location. Scheduled backups need it in the Applications folder.",
+                   actions: AnyView(Button("Move to Applications") { model.moveToApplications() }.buttonStyle(.borderedProminent)))
+        }
+        if !model.localAccess && !model.checkingAccess {
             Banner(icon: "lock.fill", tint: .orange, title: "No access to the local folder",
-                   text: "Add StorageBox Sync in System Settings → Privacy & Security → Full Disk Access, then reopen the app. Scheduled backups can't read protected folders like Desktop without it.",
+                   text: "Scheduled backups can't read this folder yet. Click “Check again” and allow access when macOS asks. If you chose “Don't Allow” before, turn Burrow on in System Settings → Privacy & Security → Files and Folders.",
                    actions: AnyView(HStack {
-                       Button("Open Full Disk Access") { model.openFullDiskAccess() }
-                       Button("Check again") { model.checkLocalAccess() }
+                       Button("Check again") { model.checkLocalAccess() }.buttonStyle(.borderedProminent)
+                       Button("Open Files and Folders") { model.openFilesAndFolders() }
                    }))
         }
     }

@@ -48,8 +48,6 @@ struct HostKeySheet: View {
     let onTrust: () -> Void
     let onCancel: () -> Void
 
-    private var isStorageBox: Bool { request.host.hasSuffix("your-storagebox.de") }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top, spacing: 14) {
@@ -62,11 +60,9 @@ struct HostKeySheet: View {
             }
             Text("This is the first connection to this server. To be sure you are talking to the real server and not an impostor, compare the fingerprint below with the one your provider publishes. They must match exactly.")
                 .fixedSize(horizontal: false, vertical: true)
-            if isStorageBox {
-                Label("Hetzner publishes the fingerprints of its Storage Boxes in the Storage Box documentation.", systemImage: "info.circle")
-                    .font(.callout).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            Label("Hosting providers list the fingerprints in their documentation or control panel. For your own server, run “ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub” on it.", systemImage: "info.circle")
+                .font(.callout).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(request.keys.enumerated()), id: \.element.id) { i, k in
                     if i > 0 { Divider() }

@@ -21,7 +21,7 @@ if len(matches) != 1:
     raise SystemExit(f"Expected one generated item for {version}, found {len(matches)}")
 item = matches[0]
 enclosure = item.find("enclosure")
-expected = f"/releases/download/v{version}/StorageBox-Sync-{version}.dmg"
+expected = f"/releases/download/v{version}/Burrow-{version}.dmg"
 if enclosure is None or expected not in enclosure.get("url", "") or not enclosure.get(f"{{{SPARKLE}}}edSignature"):
     raise SystemExit("Generated item has an unexpected URL or no EdDSA signature")
 

@@ -16,16 +16,16 @@ omitted:
   - section: spacing
     reason: "Native SwiftUI controls own their platform spacing; shared CardModifier owns card padding."
   - section: components
-    reason: "SwiftUI controls and Sources/StorageBoxSync/UI/Components.swift are the component source of truth."
+    reason: "SwiftUI controls and Sources/Burrow/UI/Components.swift are the component source of truth."
 ---
 
 ## Overview
 
-StorageBox Sync is a macOS backup and SFTP browser for people who need to know that their files are safe and recoverable. It should feel like a dependable storage tool: familiar Finder-like controls, clear backup status, and quiet detail. The file archive icon gives the app its own identity without making the file browser look branded at the expense of legibility.
+Burrow is a macOS backup and SFTP browser for people who need to know that their files are safe and recoverable. It should feel like a dependable storage tool: familiar Finder-like controls, clear backup status, and quiet detail. The file archive icon gives the app its own identity without making the file browser look branded at the expense of legibility.
 
 ## Colors
 
-The icon owns the navy, teal and amber values above. The application uses macOS semantic backgrounds, text and accent color so light mode, dark mode and accessibility contrast remain native. Amber marks archived versions; status always has text and an icon as well as color. Theme constants in `Sources/StorageBoxSync/UI/Components.swift` own shared app surfaces.
+The icon owns the navy, teal and amber values above. The application uses macOS semantic backgrounds, text and accent color so light mode, dark mode and accessibility contrast remain native. Amber marks archived versions; status always has text and an icon as well as color. Theme constants in `Sources/Burrow/UI/Components.swift` own shared app surfaces.
 
 ## Typography
 

@@ -24,7 +24,11 @@ struct AboutView: View {
             Link("karlo@push.hr", destination: URL(string: "mailto:karlo@push.hr")!)
             Text("Open source under the MIT License. Includes rclone and Sparkle.")
                 .font(.caption).foregroundStyle(.secondary)
-            Button("Check for Updates…") { updater.checkForUpdates() }
+            if updater.canCheck {
+                Button("Check for Updates…") { updater.checkForUpdates() }
+            } else {
+                Text("Development build – updates are off.").font(.caption).foregroundStyle(.secondary)
+            }
             Button("Close") { dismiss() }
         }
         .frame(width: 440)

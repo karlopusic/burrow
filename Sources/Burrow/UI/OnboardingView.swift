@@ -151,7 +151,7 @@ struct OnboardingView: View {
             Spacer(minLength: 0)
             Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 96, height: 96)
             VStack(spacing: 6) {
-                Text("Welcome to StorageBox Sync").font(.largeTitle.bold())
+                Text("Welcome to Burrow").font(.largeTitle.bold())
                 Text("Back up a folder of your Mac to an SFTP storage server – automatically, with previous versions kept safely.")
                     .font(.title3).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -197,8 +197,8 @@ struct OnboardingView: View {
                 header("Where should backups go?", "Enter the address and login of your SFTP server.")
             }
             Picker("", selection: $isStorageBox) {
+                Text("SFTP server").tag(false)
                 Text("Hetzner Storage Box").tag(true)
-                Text("Other SFTP server").tag(false)
             }
             .pickerStyle(.segmented).labelsHidden().fixedSize()
             .onChange(of: isStorageBox) { _, sb in
@@ -416,19 +416,12 @@ struct OnboardingView: View {
                 DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute).disabled(!cfg.scheduleEnabled)
             }
             .formStyle(.grouped).scrollDisabled(true).frame(height: cfg.frequency == .weekly ? 190 : 150)
-            if needsFullDiskAccess {
-                Banner(icon: "lock.fill", tint: .orange, title: "Full Disk Access needed",
-                       text: "Scheduled backups can't read Desktop, Documents or Downloads until StorageBox Sync is allowed in System Settings → Privacy & Security → Full Disk Access.",
-                       actions: AnyView(Button("Open Full Disk Access") { model.openFullDiskAccess() }))
+            if AccessCheck.isProtected(cfg.localPath) {
+                Label("macOS will ask once whether Burrow may read this folder. Choose “Allow” so scheduled backups can read it.",
+                      systemImage: "lock.shield")
+                    .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
         }
-    }
-
-    private var needsFullDiskAccess: Bool {
-        let protected = ["Desktop", "Documents", "Downloads"].map { Paths.home + "/" + $0 }
-        let inProtected = protected.contains { cfg.localPath == $0 || cfg.localPath.hasPrefix($0 + "/") }
-        let readable = (try? FileManager.default.contentsOfDirectory(atPath: cfg.localPath)) != nil
-        return inProtected || !readable
     }
 
     private func finish() {

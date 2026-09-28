@@ -3,8 +3,8 @@
 <plist version="1.0">
 <dict>
   <key>CFBundleIdentifier</key><string>__BUNDLE_ID__</string>
-  <key>CFBundleName</key><string>StorageBox Sync</string>
-  <key>CFBundleDisplayName</key><string>StorageBox Sync</string>
+  <key>CFBundleName</key><string>Burrow</string>
+  <key>CFBundleDisplayName</key><string>Burrow</string>
   <key>CFBundleExecutable</key><string>__EXE__</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
@@ -12,14 +12,18 @@
   <key>CFBundleVersion</key><string>__VERSION__</string>
   <key>CFBundleDevelopmentRegion</key><string>en</string>
   <key>CFBundleLocalizations</key><array><string>en</string><string>hr</string><string>de</string></array>
-  <key>SUFeedURL</key><string>https://raw.githubusercontent.com/karlopusic/storagebox-sync/main/appcast.xml</string>
+  <key>SUFeedURL</key><string>https://raw.githubusercontent.com/karlopusic/burrow/main/appcast.xml</string>
   <key>SUPublicEDKey</key><string>vgtvPKfVBDRLwHIWjlKeY5xofxXajIOgaQSxq35aUw0=</string>
   <key>SUVerifyUpdateBeforeExtraction</key><true/>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
   <key>NSHighResolutionCapable</key><true/>
-  <key>NSDesktopFolderUsageDescription</key><string>StorageBox Sync reads the folder you chose so it can back it up to your Storage Box.</string>
-  <key>NSDocumentsFolderUsageDescription</key><string>StorageBox Sync reads the folder you chose so it can back it up to your Storage Box.</string>
+  <key>NSDesktopFolderUsageDescription</key><string>Burrow reads the folder you chose so it can back it up to your server.</string>
+  <key>NSDocumentsFolderUsageDescription</key><string>Burrow reads the folder you chose so it can back it up to your server.</string>
+  <key>NSDownloadsFolderUsageDescription</key><string>Burrow reads the folder you chose so it can back it up to your server, and saves downloads and restored files there.</string>
+  <key>NSRemovableVolumesUsageDescription</key><string>Burrow reads the folder you chose so it can back it up to your server.</string>
+  <key>NSNetworkVolumesUsageDescription</key><string>Burrow reads the folder you chose so it can back it up to your server.</string>
+  <key>NSFileProviderDomainUsageDescription</key><string>Burrow reads the folder you chose so it can back it up to your server.</string>
   <key>NSHumanReadableCopyright</key><string>© 2026 PUSH · MIT License</string>
 </dict>
 </plist>

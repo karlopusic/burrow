@@ -1,5 +1,34 @@
 # Changelog
 
+## Unreleased
+
+Release preparation: the app is now **Burrow**, plus security fixes, no Full Disk Access, Intel support and
+automated tests.
+
+- **Renamed to Burrow** (bundle `hr.push.burrow`), so the name isn't tied to one storage provider. The first launch
+  moves an existing StorageBox Sync installation over: settings, run history, logs, server bookmarks, Keychain
+  passwords, preferences and the schedule. It waits while an old backup is still running. The old folders are kept
+  as "… (migrated)". New server bookmarks use `.burrow-trash`; existing ones keep their trash folder.
+
+- **Intel Macs**: the bundled rclone is now the official universal release (Apple silicon + Intel), pinned and
+  checksum-verified. Before, it was a copy of the build Mac's Homebrew rclone and didn't run on Intel.
+- **Security**: the local rclone daemon's credentials are passed through the environment instead of the command
+  line, where other users on the same Mac could read them.
+- **Security**: installing an SSH key no longer replaces the server's `authorized_keys` when reading it fails
+  (timeout, permissions). The setup stops with an error instead, so existing keys are never lost.
+- Line breaks in the server or user field can no longer inject rclone options.
+- **No Full Disk Access needed.** For folders in Desktop, Documents, Downloads, iCloud Drive or on external/network
+  volumes, the app checks access the same way a scheduled backup reads the folder (through launchd), and macOS asks
+  once for that folder only.
+- **Move to Applications**: when the app runs from the disk image or a translocated download, it offers to move
+  itself, and it no longer installs a schedule pointing at a path that disappears.
+- Notifications come from Burrow instead of "Script Editor".
+- Provider-neutral setup: "SFTP server" is the default in the setup assistant, and the fingerprint hint explains
+  where any provider (or your own server) shows it.
+- Development builds don't check for updates ("Check for Updates…" is hidden).
+- Unit tests (`scripts/test.sh`) and integration tests against a local SFTP server (`scripts/integration.sh`),
+  both in CI. The integration suite also runs against OpenSSH (verified with macOS Remote Login). `SECURITY.md`, issue templates, clearer third-party notices and password FAQ.
+
 ## 0.3.0 – 2026-09-27
 
 Setup assistant, host-key verification and a visual redesign.

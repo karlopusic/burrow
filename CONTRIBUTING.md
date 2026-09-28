@@ -3,8 +3,8 @@
 ## Project layout
 
 ```
-Sources/StorageBoxSync/
-  App/    StorageBoxSyncApp.swift   entry point: `--run` / `--dry-run` = headless, otherwise the SwiftUI app
+Sources/Burrow/
+  App/    BurrowApp.swift   entry point: `--run` / `--dry-run` = headless, otherwise the SwiftUI app
   Core/   Runner.swift              one backup or preview run (rclone sync + safety checks)
           Config.swift              config.json model; generates rclone.conf from it
           Status.swift              status.json (run history, running job) with flock-protected writes
@@ -18,6 +18,9 @@ Sources/StorageBoxSync/
           HostKeys.swift            host-key scan, SHA256 fingerprints, known_hosts trust
           DirCache.swift            bounded per-server cache of folder listings (memory LRU + ~/Library/Caches)
           SelfTest.swift            `--selftest`: end-to-end test of browser + transfers on a real server
+          Install.swift             where the app runs from (Applications / DMG / translocated), Move to Applications
+          AccessCheck.swift         `--check-access`: can a launchd-started run read the local folder?
+          Updates.swift             Sparkle updater (off for development builds)
           Shell.swift, Paths.swift  process helpers, file locations, L() localization helper
   UI/     AppModel.swift            observable state + actions for the views
           BrowserModel.swift        one server browser: listing, search, rename/move, trash, uploads/downloads
@@ -26,16 +29,37 @@ Sources/StorageBoxSync/
           OnboardingView.swift      first-run setup assistant
           *View.swift               Browser, Transfers, bookmark editor, backup Overview/Versions/Settings
 Resources/                          Info.plist template, icon, en/hr Localizable.strings
+Tests/UnitTests.swift               unit tests (no network), run by scripts/test.sh
+scripts/toolchain.sh                SDK choice + pinned, checksum-verified Sparkle and universal rclone (shared)
 scripts/build.sh                    compiles, assembles the .app, bundles rclone and Sparkle, signs, builds the DMG
+scripts/test.sh                     unit tests in a throw-away home folder
+scripts/integration.sh              selftest + backup scenarios against a local `rclone serve sftp`
 ```
+
+## Tests
+
+```sh
+scripts/test.sh                                  # unit tests, seconds, no network
+scripts/build.sh && scripts/integration.sh       # end-to-end against a throw-away local SFTP server
+OPENSSH_KEY=~/.ssh/test_key scripts/integration.sh   # same, against this Mac's OpenSSH (Remote Login)
+```
+
+For the OpenSSH run, add a dedicated test key to `~/.ssh/authorized_keys`, ideally restricted with
+`from="127.0.0.1,::1"`, and remove it afterwards. The tests work in a `_burrow_it_<n>` folder in your home folder
+and delete it again. On an unthrottled local server the cancel test is reported as SKIP: a 300 MB upload
+finishes before the first progress update.
+
+Both run in CI on every push. `integration.sh` covers the browser self-test and the backup safety scenarios
+(upload, changed file → versions, deleted file → versions, preview changes nothing, safety block, "Run anyway",
+NFC names, empty source). It never touches a real server or real data.
 
 ## Building
 
 ```sh
-scripts/build.sh                   # dist/StorageBox-Sync-$(cat VERSION).dmg
+scripts/build.sh                   # dist/Burrow-$(cat VERSION).dmg
 VERSION=0.2.0 scripts/build.sh
 SIGN_ID="Developer ID Application: …" scripts/build.sh
-SIGN_ID="Developer ID Application: …" NOTARY_PROFILE="storagebox-sync" scripts/build.sh
+SIGN_ID="Developer ID Application: …" NOTARY_PROFILE="burrow" scripts/build.sh
 ```
 
 With only the Command Line Tools installed, the script compiles against the newest macOS **26.x** SDK:
@@ -51,7 +75,7 @@ Runs 33 checks against a real SFTP server inside a random `_sbs_selftest_<n>` fo
 removes again (uploads, conflicts, rename, move, trash / put back, Quick Look, downloads, cancel cleanup):
 
 ```sh
-"build/StorageBox Sync.app/Contents/MacOS/StorageBoxSync" --selftest <host> <port> <user> <keyfile>
+"build/Burrow.app/Contents/MacOS/Burrow" --selftest <host> <port> <user> <keyfile>
 ```
 
 Run it before every commit that touches `BrowserModel`, `Transfers` or `RcloneDaemon`.
@@ -62,8 +86,8 @@ Never point a development build at real data first. Create a throw-away source f
 remote path (e.g. `/home/_sbs_test/dst` and `/home/_sbs_test/_versions`), then run the binary directly:
 
 ```sh
-"build/StorageBox Sync.app/Contents/MacOS/StorageBoxSync" --dry-run
-"build/StorageBox Sync.app/Contents/MacOS/StorageBoxSync" --run
+"build/Burrow.app/Contents/MacOS/Burrow" --dry-run
+"build/Burrow.app/Contents/MacOS/Burrow" --run
 ```
 
 Check at least: new file uploaded · changed file → old copy in versions · deleted file → moved to versions ·
@@ -78,12 +102,12 @@ The LaunchAgent of a real installation may point at `build/`, and a launched bui
 look at UI changes without touching real settings or the real schedule, start the binary with a throw-away home:
 
 ```sh
-CFFIXED_USER_HOME=/tmp/sbs-home "build/StorageBox Sync.app/Contents/MacOS/StorageBoxSync"
-launchctl bootout gui/$(id -u)/hr.push.storageboxsync.dev   # afterwards
+CFFIXED_USER_HOME=/tmp/sbs-home "build/Burrow.app/Contents/MacOS/Burrow"
+launchctl bootout gui/$(id -u)/hr.push.burrow.dev   # afterwards
 ```
 
 Config, bookmarks, logs and `known_hosts` then live under that folder, and the agent gets the label
-`hr.push.storageboxsync.dev`. UserDefaults are still shared with the real app.
+`hr.push.burrow.dev`. UserDefaults are still shared with the real app.
 
 ## Localization
 

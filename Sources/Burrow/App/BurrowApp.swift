@@ -4,11 +4,16 @@ import AppKit
 @main
 enum Entry {
     static func main() {
-        AppLanguage.apply()
         let args = CommandLine.arguments
+        let headless = ["--run", "--dry-run", "--check-access", "--selftest", "--version"].contains { args.contains($0) }
+        if !headless { RenameMigration.migrateDefaults() }   // before the language is applied
+        AppLanguage.apply()
         if args.contains("--version") {
             print(AppInfo.version)
             return
+        }
+        if args.contains("--check-access") {
+            exit(AccessCheck.probe())
         }
         if args.contains("--run") || args.contains("--dry-run") {
             exit(Runner.main(args: args))
@@ -18,11 +23,11 @@ enum Entry {
             Task { @MainActor in exit(await SelfTest.run(rest)) }
             RunLoop.main.run()   // timers (transfer polling) need a running main run loop
         }
-        StorageBoxSyncApp.main()
+        BurrowApp.main()
     }
 }
 
-struct StorageBoxSyncApp: App {
+struct BurrowApp: App {
     @StateObject private var model = AppModel()
     @StateObject private var updater = UpdateController()
 
@@ -66,7 +71,7 @@ struct MenuContent: View {
             Button("Preview changes") { model.startDryRun() }.disabled(model.needsSetup)
         }
         Divider()
-        Button("Check for Updates…") { updater.checkForUpdates() }
+        if updater.canCheck { Button("Check for Updates…") { updater.checkForUpdates() } }
         Button("Open \(AppInfo.name)") {
             openWindow(id: "main")
             NSApp.activate(ignoringOtherApps: true)

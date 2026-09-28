@@ -1,8 +1,8 @@
 import Foundation
 
 enum AppInfo {
-    static let name = "StorageBox Sync"
-    static let bundleID = "hr.push.storageboxsync"
+    static let name = "Burrow"
+    static let bundleID = "hr.push.burrow"
     /// A dev instance started with CFFIXED_USER_HOME (a throw-away home) gets its own agent, so it can never
     /// replace – or `launchctl bootout` – the real scheduled backup.
     static let agentLabel = ProcessInfo.processInfo.environment["CFFIXED_USER_HOME"] == nil ? bundleID : bundleID + ".dev"
@@ -21,7 +21,7 @@ enum Paths {
     static let forceFlag = support + "/force-next"
     static let stopFlag = support + "/stop-requested"
     static let agentPlist = home + "/Library/LaunchAgents/\(AppInfo.agentLabel).plist"
-    static let defaultKey = home + "/.ssh/storageboxsync_ed25519"
+    static let defaultKey = home + "/.ssh/burrow_ed25519"
     static let knownHosts = home + "/.ssh/known_hosts"
     static let restoreRoot = home + "/Downloads/\(AppInfo.name) Restore"
 

@@ -1,4 +1,5 @@
 import Foundation
+import UserNotifications
 
 typealias ShellResult = (code: Int32, out: String, err: String)
 
@@ -37,7 +38,37 @@ func lastErrorLine(_ s: String) -> String {
     s.split(separator: "\n").map(String.init).last { !$0.contains("NOTICE") && !$0.isEmpty } ?? s
 }
 
+/// Posts a notification as Burrow (headless runs too – the executable lives in the app bundle).
+/// Falls back to AppleScript, shown as "Script Editor", only when the app was never asked for notification permission.
 func notify(_ subtitle: String, _ text: String) {
+    if ProcessInfo.processInfo.environment["BURROW_QUIET"] != nil { return }   // scripts/integration.sh
+    if Bundle.main.bundleIdentifier != nil {
+        let center = UNUserNotificationCenter.current()
+        let done = DispatchSemaphore(value: 0)
+        var status: UNAuthorizationStatus = .notDetermined
+        center.getNotificationSettings { status = $0.authorizationStatus; done.signal() }
+        _ = done.wait(timeout: .now() + 5)
+        switch status {
+        case .authorized, .provisional:
+            let content = UNMutableNotificationContent()
+            content.title = AppInfo.name
+            content.subtitle = subtitle
+            content.body = text
+            let posted = DispatchSemaphore(value: 0)
+            center.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)) { _ in posted.signal() }
+            _ = posted.wait(timeout: .now() + 5)   // a headless run exits right after this
+            return
+        case .denied:
+            return                                  // the user turned notifications off
+        default:
+            break
+        }
+    }
     let esc = { (s: String) in s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") }
     runCapture("/usr/bin/osascript", ["-e", "display notification \"\(esc(text))\" with title \"\(AppInfo.name)\" subtitle \"\(esc(subtitle))\""])
+}
+
+/// Asked once from the app, so later headless runs can post as Burrow.
+func requestNotificationPermission() {
+    UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
 }
