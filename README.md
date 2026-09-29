@@ -20,6 +20,22 @@
 > server. Read [What Burrow is – and isn't](#what-burrow-is--and-isnt) before you rely on it, and keep a second,
 > independent copy of anything you can't afford to lose.
 
+## Screenshots
+
+Captured from Burrow on macOS with fictional project files and an isolated local SFTP server. The backup history shown here is sample data.
+
+**Backup status and recent runs**
+
+![Burrow backup status with recent runs and a preview](docs/screenshots/status.png)
+
+**Browse files on an SFTP server**
+
+![Burrow browsing fictional project files on an SFTP server](docs/screenshots/browser.png)
+
+**Find and restore older versions**
+
+![Burrow showing archived versions of fictional files](docs/screenshots/versions.png)
+
 ---
 
 ## Why
