@@ -13,9 +13,9 @@ STAGE=".build/update-feed-$VERSION"
 if ! xcrun stapler validate "$DMG" >/dev/null 2>&1; then
   # Not notarized: allowed for the self-signed identity, never for an ad-hoc development build.
   MNT="$(mktemp -d)"
-  hdiutil attach -nobrowse -readonly -mountpoint "$MNT" "$DMG" >/dev/null
-  SIG="$(codesign -dv "$MNT/Burrow.app" 2>&1 || true)"
-  hdiutil detach "$MNT" >/dev/null
+  hdiutil attach -nobrowse -readonly -mountpoint "$MNT" "$DMG" >/dev/null 2>&1
+  SIG="$(codesign -dv --verbose=2 "$MNT/Burrow.app" 2>&1 || true)"   # Authority= is only printed with --verbose=2
+  hdiutil detach "$MNT" >/dev/null 2>&1
   if [[ "$SIG" != *"Authority="* ]]; then echo "$DMG is ad-hoc signed. Build with SIGN_ID (see RELEASING.md)."; exit 1; fi
   echo "Note: $DMG is not notarized; users confirm it once with Open Anyway."
 fi
