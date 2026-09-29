@@ -1,43 +1,44 @@
 # Roadmap
 
-## Before the first public release (0.x → 1.0)
+Where Burrow is heading after 0.4, the first public beta. Plans can change; data safety always comes before new
+features. Ideas and requests are welcome in the [issues](https://github.com/karlopusic/burrow/issues).
 
-- [ ] **Stable signing identity** – a self-signed certificate (free) keeps folder permissions and Keychain access
-      across updates; Developer ID + notarization (Apple Developer Program) also removes the "Open Anyway" step.
-- [ ] **Publish the GitHub repository** – the update feed (`SUFeedURL`) and the README links point there.
-- [x] **Universal rclone** – official pinned release for Apple silicon and Intel.
-- [x] **No Full Disk Access** – per-folder permission, verified through launchd.
-- [x] **Automated tests** – unit tests and local-SFTP integration tests in CI.
-- [ ] **Rendered UI review** – inspect the current design in the running app at minimum window size, light/dark mode and all locales.
-- [ ] **Screenshots / short GIF** for the README.
-- [ ] **GitHub Actions**: build the DMG on tag push and attach it to a release.
-- [ ] **Signed update rehearsal** – publish a notarized test release, prepare the EdDSA appcast, and install it from an older version.
-- [x] **Other-provider backup check** – OpenSSH (macOS Remote Login) and `rclone serve sftp` pass the full
-      integration suite (`OPENSSH_KEY=… scripts/integration.sh`); CI runs the latter on every push.
-- [ ] Try a Linux VPS and a Synology/QNAP NAS before the website launch (quota display, restricted shells).
-- [x] **Onboarding flow** – a first-run assistant instead of pointing new users at Settings.
-- [x] **Browser stop test** – cancelled uploads preserve unrelated remote files whose names resemble rclone partials
-      (`--selftest`). An interrupted upload may leave its own partial file for manual cleanup.
-- [x] **Host-key fingerprint confirmation** before the first connection (key setup, test, browser).
+## 0.4.x – Trust and polish
 
-## Next
+- A notification when no backup has succeeded for longer than planned.
+- A weekly integrity check: a sample of backed-up files is downloaded and compared with your Mac.
+- "Test a restore" to prove with one click that your files come back.
+- "Copy diagnostics" for bug reports, with server names and paths removed.
+- Accessibility (VoiceOver, keyboard navigation) and visual polish.
 
-- [ ] **Edit in external app** – open a remote file in Photoshop/InDesign/…, re-upload on every save.
-- [ ] Drag files from the browser straight into Finder (file promises); today: Download / Download to….
-- [ ] Get Info: Unix permissions and owner, with chmod.
-- [ ] Resume interrupted single-file uploads (currently a paused file restarts from zero).
-- [ ] Multiple browser tabs/windows per server.
+## 0.5 – Multiple backups
 
-- [ ] Multiple backup jobs (several local folders → several remote folders).
-- [ ] Bandwidth limit and "only on power adapter / only on Wi-Fi X" options.
-- [x] Automatic update check (Sparkle); public installation awaits the signed update rehearsal above.
-- [ ] Weekly integrity check (`rclone check --download` on a random sample).
-- [ ] Email / webhook alert when no successful backup for N days.
-- [ ] Browse the live backup (not only archived versions) and restore from it.
-- [ ] Optional client-side encryption (rclone `crypt` remote).
-- [ ] Launch at login toggle for the menu bar item.
+- Back up several folders, each to its own server and folder, with its own schedule and retention.
+- Bandwidth limit, "only on power adapter" and "not on mobile hotspots or low-data networks".
+- Edit the list of excluded files in the app.
 
-## Ideas
+## 0.6 – S3-compatible storage
 
-- Support other SFTP targets and S3-compatible storage through rclone backends.
-- Homebrew cask.
+- Backblaze B2, Wasabi, Cloudflare R2, Amazon S3, Hetzner Object Storage and MinIO, alongside SFTP.
+- Old versions kept by the bucket's own versioning.
+- With Object Lock, versions can't be deleted for a set time, not even from your Mac. That protects the backup
+  against ransomware and mistakes.
+
+## 0.7 – Optional encryption
+
+- End-to-end encryption per backup, off by default, with a recovery key you save when you turn it on.
+
+## Along the way
+
+- Open a server file in any app and save it straight back.
+- Drag files from the browser into Finder.
+- Resume interrupted uploads, several browser tabs, file permissions in Get Info.
+- Launch at login.
+- Guides for popular providers and NAS devices.
+
+## Not planned
+
+- Deduplication or a special repository format. Burrow keeps plain files you can open anywhere; if you need
+  deduplication, [restic](https://restic.net) or [Borg](https://www.borgbackup.org) are the better tools.
+- Consumer clouds (Google Drive, Dropbox, OneDrive), which have their own sync apps.
+- Windows or Linux versions.
