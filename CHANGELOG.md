@@ -17,6 +17,22 @@ automated tests.
 - **Security**: installing an SSH key no longer replaces the server's `authorized_keys` when reading it fails
   (timeout, permissions). The setup stops with an error instead, so existing keys are never lost.
 - Line breaks in the server or user field can no longer inject rclone options.
+- **Data safety in the file browser**: a case-only rename ("Report.pdf" → "report.pdf") on a server that ignores
+  case (macOS, Windows) deleted the file; it now goes through a temporary name, and name conflicts ignore case.
+  Uploads, copies and moves never overwrite a server file, even one that appeared after the conflict check, and
+  stop with an error when the folder can't be listed. "Empty Trash" can't run on an empty, root or backup folder
+  set as trash. "Put Back" no longer deletes items whose origin wasn't recorded, and two deletes in the same
+  second no longer collide.
+- **First backup after a folder change**: when the local or server folder changes (or on a new Mac), the first
+  run compares with the files already in the server folder and waits for "Run anyway" if the local folder has
+  far fewer. Settings warns when a folder changes; the setup assistant says that moved files are deleted after the
+  retention period. Backup and versions folders written as one absolute and one relative path are checked for
+  overlap too.
+- **Missed backups catch up at login**: a scheduled time missed while the Mac was shut down now runs at the next
+  login (launchd only caught up after sleep).
+- Stop works while a backup is still counting files. Pruning old versions no longer trusts the Mac's clock alone,
+  so a clock that jumps ahead can't delete the whole archive. Quitting asks first while transfers run; transfers
+  whose rclone job is lost are marked failed instead of running forever. `rcd.log` is rotated at 5 MB.
 - **No Full Disk Access needed.** For folders in Desktop, Documents, Downloads, iCloud Drive or on external/network
   volumes, the app checks access the same way a scheduled backup reads the folder (through launchd), and macOS asks
   once for that folder only.

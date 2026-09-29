@@ -9,14 +9,17 @@ enum Agent {
         // From the DMG or a translocated path the agent would point at a path that vanishes. Leave any existing
         // agent (e.g. of the copy in Applications) untouched instead.
         guard Install.canSchedule(Install.current) else { return false }
+        let scheduled = cfg.scheduleEnabled && cfg.isComplete
         var plist: [String: Any] = [
             "Label": AppInfo.agentLabel,
             "ProgramArguments": [Paths.executable, "--run", "--trigger=schedule"],
-            "RunAtLoad": false,
+            // Also started at login, to catch up on a time missed while the Mac was off (launchd only catches up
+            // after sleep). The run itself decides whether a backup is due: `Runner.isDue`.
+            "RunAtLoad": scheduled,
             "StandardOutPath": Paths.logs + "/agent.log",
             "StandardErrorPath": Paths.logs + "/agent.log",
         ]
-        if cfg.scheduleEnabled && cfg.isComplete { plist["StartCalendarInterval"] = calendarInterval(cfg) }
+        if scheduled { plist["StartCalendarInterval"] = calendarInterval(cfg) }
         guard let data = try? PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0) else { return false }
         let loaded = runCapture("/bin/launchctl", ["print", "\(domain)/\(AppInfo.agentLabel)"]).code == 0
         if FileManager.default.contents(atPath: Paths.agentPlist) == data && loaded { return true }

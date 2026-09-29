@@ -85,6 +85,13 @@ struct AppConfig: Codable, Equatable {
             && b.port == port && b.user == user
     }
 
+    /// What a file count belongs to. After a change of folder or server the last local count says nothing about
+    /// what's on the server, so the next run compares with the server folder instead.
+    var backupPair: String {
+        [localPath, host.lowercased(), String(port), user, remotePath.trimmingCharacters(in: .whitespaces)]
+            .joined(separator: "\n")
+    }
+
     var isConnectionConfigured: Bool { !host.isEmpty && !user.isEmpty }
     var isComplete: Bool {
         isConnectionConfigured && !localPath.isEmpty && !remotePath.isEmpty
@@ -108,7 +115,8 @@ struct AppConfig: Codable, Equatable {
         if ["/", "/home", ".", "~"].contains(versions) {
             return L("Choose a dedicated versions subfolder on the server.")
         }
-        if remote == versions || versions.hasPrefix(remote + "/") || remote.hasPrefix(versions + "/") {
+        // also catches `/home/P` with `P/_versions`: a relative path starts at the login folder
+        if RPath.mayOverlap(remote, versions) {
             return L("The versions folder must be outside the backup folder.")
         }
         return nil

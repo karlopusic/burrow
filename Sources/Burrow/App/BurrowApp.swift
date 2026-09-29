@@ -27,7 +27,24 @@ enum Entry {
     }
 }
 
+/// Quitting ends the rclone daemon and with it every upload and download, so ask first while any are active.
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        let active = MainActor.assumeIsolated { TransferManager.shared.activeCount }
+        guard active > 0 else { return .terminateNow }
+        let alert = NSAlert()
+        alert.messageText = L("Transfers in progress")
+        alert.informativeText = L("Quitting stops the active uploads and downloads (%ld). Unfinished files are not completed.", active)
+        alert.addButton(withTitle: L("Quit Anyway"))
+        alert.addButton(withTitle: L("Cancel"))
+        alert.buttons.first?.hasDestructiveAction = true
+        NSApp.activate(ignoringOtherApps: true)
+        return alert.runModal() == .alertFirstButtonReturn ? .terminateNow : .terminateCancel
+    }
+}
+
 struct BurrowApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var model = AppModel()
     @StateObject private var updater = UpdateController()
 

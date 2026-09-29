@@ -355,7 +355,7 @@ struct OnboardingView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Label("This server folder already contains \(count) items.", systemImage: "exclamationmark.triangle.fill")
                         .font(.headline).foregroundStyle(.orange)
-                    Text("On the first backup, everything in it that isn't in your local folder is moved to the versions folder. The backup folder will then match your Mac exactly.")
+                    Text("On the first backup, everything in it that isn't in your local folder is moved to the versions folder and deleted for good after \(cfg.retentionDays) days. The backup folder will then match your Mac exactly.")
                         .font(.callout).fixedSize(horizontal: false, vertical: true)
                     Toggle("I understand, use this folder", isOn: $acceptNonEmpty)
                 }
@@ -401,7 +401,7 @@ struct OnboardingView: View {
     private var schedule: some View {
         VStack(alignment: .leading, spacing: 14) {
             header("When should it run?",
-                   "The backup runs in the background at this time. If the Mac is asleep or off, it runs as soon as it wakes up.")
+                   "The backup runs in the background at this time. If the Mac is asleep or off, it runs when it wakes up or at the next login.")
             Form {
                 Toggle("Automatic backup", isOn: $cfg.scheduleEnabled)
                 Picker("Frequency", selection: $cfg.frequency) {

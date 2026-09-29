@@ -57,8 +57,16 @@ enum UnitTests {
         check(cfg("P", "P/_versions").folderProblem != nil, "versions inside backup refused")
         check(cfg("V/P", "V").folderProblem != nil, "backup inside versions refused")
         check(cfg("P", "Px").folderProblem == nil, "name prefix is not nesting")
+        check(cfg("/home/Projects", "Projects/_versions").folderProblem != nil, "absolute backup + relative versions inside it refused")
+        check(cfg("Projects", "/home/Projects/_v").folderProblem != nil, "relative backup + absolute versions inside it refused")
+        check(cfg("/home/_versions/P", "_versions").folderProblem != nil, "backup inside relative versions refused")
+        check(cfg("/home/Projects", "_versions").folderProblem == nil, "absolute backup + unrelated relative versions is fine")
         check(cfg("/home/../KARLO", "_v").folderProblem != nil, "parent-directory segment refused")
         check(cfg("./P", "_v").folderProblem != nil, "dot segment refused")
+        var moved = cfg("P", "_v"); moved.localPath = "/tmp/other"
+        check(cfg("P", "_v").backupPair != moved.backupPair, "another local folder is another backup pair")
+        check(cfg("P", "_v").backupPair != cfg("Q", "_v").backupPair, "another server folder is another backup pair")
+        check(cfg("P", "_v").backupPair == cfg("P ", "_w").backupPair, "versions folder and whitespace don't change the pair")
         check(cfg("", "").folderProblem == nil && !cfg("", "").isComplete, "empty is incomplete, not wrong")
     }
 
@@ -97,6 +105,24 @@ enum UnitTests {
         }
         let stamp = Runner.stampFormatter.string(from: Date()) + "-abcdef12"
         check(Runner.archiveDate(stamp) != nil, "the runner's own stamp is recognized (else pruning would skip it)")
+
+        // pruning: the Mac's clock alone never decides
+        let day = 86400.0
+        let now = Date(timeIntervalSince1970: 1_790_000_000)
+        func folder(_ daysAgo: Double) -> String {
+            Runner.stampFormatter.string(from: now.addingTimeInterval(-daysAgo * day)) + "-0123abcd"
+        }
+        let normal = [(folder(200), now.addingTimeInterval(-200 * day)), (folder(100), now.addingTimeInterval(-100 * day)),
+                      (folder(10), now.addingTimeInterval(-10 * day)), (folder(0), now)].map { (name: $0.0, serverTime: Optional($0.1)) }
+        check(Set(Runner.expiredVersions(normal, now: now, retentionDays: 90)) == [folder(200), folder(100)], "folders past retention are pruned")
+        let jumped = now.addingTimeInterval(5 * 365 * day)                   // the Mac thinks it's five years later
+        check(Set(Runner.expiredVersions(normal, now: jumped, retentionDays: 90)) == [folder(200), folder(100)],
+              "a clock that jumped ahead prunes no more than usual")
+        check(Runner.expiredVersions(normal.map { (name: $0.name, serverTime: nil) }, now: now, retentionDays: 90).isEmpty,
+              "without server times nothing is pruned")
+        let foreign = normal + [(name: "Projects", serverTime: Optional(jumped))]
+        check(Set(Runner.expiredVersions(foreign, now: jumped, retentionDays: 90)) == [folder(200), folder(100)],
+              "non-stamp folders neither count as server time nor get pruned")
     }
 
     // MARK: schedule
@@ -126,6 +152,27 @@ enum UnitTests {
         }
         c.scheduleEnabled = false
         check(c.nextRun() == nil, "no next run when the schedule is off")
+
+        // catch-up at login (RunAtLoad) vs. scheduled start
+        var d = cfg("P", "V"); d.hour = 21; d.minute = 0; d.frequency = .daily
+        let g = Calendar.current
+        func at(_ day: Int, _ h: Int, _ m: Int = 0, _ s: Int = 0) -> Date {
+            g.date(from: DateComponents(year: 2026, month: 10, day: day, hour: h, minute: m, second: s))!
+        }
+        let installed = at(1, 10)
+        check(Runner.isDue(d, now: at(1, 21, 0, 1), lastAttempt: nil, installed: installed), "first scheduled start runs")
+        check(!Runner.isDue(d, now: at(1, 10, 0, 2), lastAttempt: nil, installed: installed), "installing the agent doesn't start a backup")
+        check(Runner.isDue(d, now: at(2, 21), lastAttempt: at(1, 21), installed: installed), "daily start runs")
+        check(Runner.isDue(d, now: at(3, 8), lastAttempt: at(1, 21), installed: installed), "login after a missed time catches up")
+        check(!Runner.isDue(d, now: at(3, 8), lastAttempt: at(2, 21), installed: installed), "login with nothing missed does nothing")
+        check(!Runner.isDue(d, now: at(3, 8), lastAttempt: at(2, 23), installed: installed), "a manual run after the time counts")
+        check(Runner.isDue(d, now: at(2, 20, 59, 58), lastAttempt: at(1, 21), installed: installed), "a start just before the minute runs")
+        check(!Runner.isDue(d, now: at(3, 8), lastAttempt: at(1, 21), installed: at(3, 7)), "settings saved after the missed time: no surprise run")
+        d.frequency = .weekly; d.weekday = 5                                           // Friday; 2026-10-02 is a Friday
+        check(!Runner.isDue(d, now: at(8, 8), lastAttempt: at(2, 21), installed: installed), "weekly: nothing missed during the week")
+        check(Runner.isDue(d, now: at(10, 8), lastAttempt: at(2, 21), installed: installed), "weekly: missed Friday caught up")
+        d.scheduleEnabled = false
+        check(!Runner.isDue(d, now: at(3, 8), lastAttempt: at(1, 21), installed: installed), "schedule off: never due")
     }
 
     // MARK: rclone log
@@ -254,6 +301,10 @@ enum UnitTests {
         check(RPath.uniqueName("Folder", taken: ["Folder", "Folder 2"]) == "Folder 3", "unique folder name")
         check(RPath.uniqueName("a.tar.gz", taken: ["a.tar.gz"]) == "a.tar 2.gz", "unique name keeps last extension")
         check(RPath.uniqueName("free.txt", taken: ["other"]) == "free.txt", "free name unchanged")
+        check(RPath.uniqueName("report.pdf", taken: ["Report.pdf"]) == "report 2.pdf", "names differing only in case conflict")
+        check(RPath.uniqueName("a.txt", taken: ["a 2.txt", "A.TXT"]) == "a 3.txt", "unique name skips case variants")
+        check(RPath.isTaken("ŠKOLA", ["s\u{030C}kola"]), "case + NFD variant counts as taken")
+        check(!RPath.isTaken("Report.pdf", ["Report.pdfx"]), "different name is free")
         check(RPath.join("a/", "/b", "c") == "a/b/c" && RPath.join("", "x") == "x", "join")
         check(RPath.parent("a/b/c") == "a/b" && RPath.parent("a") == "", "parent")
         check(RPath.name("a/b/c.txt") == "c.txt", "name")

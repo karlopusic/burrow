@@ -111,7 +111,7 @@
 "Once a week" = "Jednom tjedno";
 "Day" = "Dan";
 "Time" = "Vrijeme";
-"If the Mac is off or asleep at that time, the backup runs as soon as it wakes up." = "Ako je Mac u to vrijeme ugašen ili spava, backup se pokreće čim se probudi.";
+"If the Mac is asleep or off at that time, the backup runs when it wakes up or at the next login." = "Ako Mac u to vrijeme spava ili je ugašen, backup se pokreće kad se probudi ili pri sljedećoj prijavi.";
 "Versions & safety" = "Verzije i sigurnost";
 "Keep old versions for %lld days" = "Čuvaj stare verzije %lld dana";
 "Stop if a run would archive more than %lld files" = "Zaustavi ako bi se arhiviralo više od %lld datoteka";
@@ -336,7 +336,7 @@
 "I understand, use this folder" = "Razumijem, koristi ovaj folder";
 "Files you change or delete on the Mac are moved to the versions folder on the box instead of being overwritten, and kept there for %lld days." = "Datoteke koje na Macu izmijeniš ili obrišeš sele se u folder verzija na boxu umjesto da se prepišu, i ondje se čuvaju %lld dana.";
 "When should it run?" = "Kada da se pokreće?";
-"The backup runs in the background at this time. If the Mac is asleep or off, it runs as soon as it wakes up." = "Backup se pokreće u pozadini u to vrijeme. Ako Mac spava ili je ugašen, pokreće se čim se probudi.";
+"The backup runs in the background at this time. If the Mac is asleep or off, it runs when it wakes up or at the next login." = "Backup se pokreće u pozadini u to vrijeme. Ako Mac spava ili je ugašen, pokreće se kad se probudi ili pri sljedećoj prijavi.";
 "You're all set" = "Sve je spremno";
 "We recommend a preview first: it lists what the first backup would upload, without changing anything." = "Preporučujemo prvo pregled promjena: pokazuje što bi prvi backup uploadao, bez ikakvih izmjena.";
 "Choose a subfolder on the Storage Box – the whole box can't be the backup folder, because everything else in it would be moved to the versions folder." = "Odaberi podfolder na Storage Boxu – cijeli box ne može biti folder za backup, jer bi se sve ostalo na njemu preselilo u folder verzija.";
@@ -380,7 +380,7 @@
 "Backup folder on server" = "Mapa sigurnosne kopije na poslužitelju";
 "Versions folder on server" = "Mapa verzija na poslužitelju";
 "This server folder already contains %lld items." = "Ova mapa na poslužitelju već sadrži %lld stavki.";
-"On the first backup, everything in it that isn't in your local folder is moved to the versions folder. The backup folder will then match your Mac exactly." = "Pri prvoj sigurnosnoj kopiji sve što nije u lokalnoj mapi premješta se u mapu verzija. Nakon toga mapa sigurnosne kopije odgovarat će mapi na Macu.";
+"On the first backup, everything in it that isn't in your local folder is moved to the versions folder and deleted for good after %lld days. The backup folder will then match your Mac exactly." = "Pri prvom backupu sve što nije u tvom lokalnom folderu seli se u folder verzija i nakon %lld dana trajno se briše. Folder za backup tada će točno odgovarati tvom Macu.";
 "Allow remote shell commands for checksums" = "Dopusti naredbe ljuske na poslužitelju za kontrolne zbrojeve";
 "Folder paths cannot contain dot or parent-directory segments." = "Putanje mapa ne smiju sadržavati segmente za trenutačnu ili nadređenu mapu.";
 "Choose a dedicated backup subfolder on the server. The server root cannot be a backup folder." = "Odaberi zasebnu podmapu za sigurnosnu kopiju na poslužitelju. Korijenska mapa ne može biti mapa sigurnosne kopije.";
@@ -419,3 +419,10 @@
 /* Release safety fixes */
 "Choose a trash folder." = "Odaberi folder za smeće.";
 "The trash folder must be outside the backup and versions folders." = "Folder za smeće mora biti izvan foldera za backup i verzije.";
+"The local folder has %ld files, but the backup folder on the server already has %ld. Backup blocked for safety: files missing locally would be moved to the versions folder and deleted after %ld days. Use “Run anyway” if this is intended." = "Lokalno je %ld datoteka, a folder za backup na serveru već ih ima %ld. Backup je blokiran radi sigurnosti: datoteke kojih nema lokalno preselile bi se u folder verzija i nakon %ld dana trajno obrisale. Ako je to namjerno, klikni „Pokreni ipak“.";
+"Could not check the backup folder on the server: %@" = "Nije moguće provjeriti folder za backup na serveru: %@";
+"Files in the server folder that aren't in the local folder will be moved to the versions folder and deleted for good after %lld days. If the local folder has far fewer files than the server folder, the next backup waits for you to confirm it." = "Datoteke u folderu na serveru kojih nema u lokalnom folderu preselit će se u folder verzija i nakon %lld dana trajno obrisati. Ako lokalni folder ima puno manje datoteka od foldera na serveru, sljedeći backup čeka tvoju potvrdu.";
+"Lost contact with this transfer. Start it again." = "Veza s ovim prijenosom je izgubljena. Pokreni ga ponovno.";
+"Transfers in progress" = "Prijenosi su u tijeku";
+"Quitting stops the active uploads and downloads (%ld). Unfinished files are not completed." = "Izlaz zaustavlja aktivna slanja i preuzimanja (%ld). Nedovršene datoteke neće biti dovršene.";
+"Quit Anyway" = "Ipak izađi";

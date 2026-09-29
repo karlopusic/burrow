@@ -38,6 +38,8 @@ struct StatusFile: Codable {
     var runs: [RunRecord] = []
     var running: RunningInfo?
     var lastLocalCount: Int?
+    /// `AppConfig.backupPair` that `lastLocalCount` was measured for; nil in status files from before 0.4.
+    var lastCountPair: String?
 
     var lastBackup: RunRecord? { runs.first { !$0.dryRun } }
     var lastSuccess: RunRecord? { runs.first { !$0.dryRun && $0.result == .ok } }

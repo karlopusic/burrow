@@ -326,7 +326,7 @@ final class BrowserModel: ObservableObject {
         let n = name.trimmingCharacters(in: .whitespaces).nfc
         guard !n.isEmpty, !n.contains("/") else { return }
         run(L("Creating folder…")) { [self] in
-            guard !(try await names(in: cwd)).contains(n) else { throw RcloneError(message: L("“%@” already exists.", n)) }
+            guard !RPath.isTaken(n, try await names(in: cwd)) else { throw RcloneError(message: L("“%@” already exists.", n)) }
             _ = try await RcloneDaemon.shared.call("operations/mkdir", ["fs": fsRoot, "remote": RPath.join(cwd, n)])
             cache.markStale(cwd)
         }
@@ -337,10 +337,21 @@ final class BrowserModel: ObservableObject {
         guard !n.isEmpty, !n.contains("/"), n != item.name else { return }
         run(L("Renaming…")) { [self] in
             let parent = RPath.parent(item.path)
-            // the item itself doesn't count, so an NFD name can be renamed to its NFC spelling
-            let others = try await list(parent).filter { $0.name != item.name }.map(\.name.nfc)
-            guard !others.contains(n) else { throw RcloneError(message: L("“%@” already exists.", n)) }
-            try await move(item, to: RPath.join(parent, n))
+            // the item itself doesn't count, so an NFD name can be renamed to its NFC spelling or another case
+            let others = Set(try await list(parent).filter { $0.name != item.name }.map(\.name))
+            guard !RPath.isTaken(n, others) else { throw RcloneError(message: L("“%@” already exists.", n)) }
+            if RPath.conflictKey(n) == RPath.conflictKey(item.name) {
+                // On a server that ignores case the new name *is* the old file: go through a temporary name.
+                let tmp = RPath.join(parent, item.name + ".burrow-rename-" + UUID().uuidString.prefix(8).lowercased())
+                try await move(item, to: tmp)
+                let moved = RemoteItem(path: tmp, name: RPath.name(tmp), size: item.size, modified: item.modified, isDir: item.isDir)
+                do { try await move(moved, to: RPath.join(parent, n)) } catch {
+                    _ = try? await move(moved, to: item.path)
+                    throw error
+                }
+            } else {
+                try await move(item, to: RPath.join(parent, n))
+            }
         }
     }
 
@@ -578,13 +589,13 @@ final class BrowserModel: ObservableObject {
             var isDir: ObjCBool = false
             guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) else { continue }
             var name = url.lastPathComponent.nfc
-            if taken.contains(name) {
+            if RPath.isTaken(name, taken) {
                 switch await choose(name) {
                 case .skip: continue
                 case .keepBoth: name = RPath.uniqueName(name, taken: taken)
                 case .replace:
                     do {
-                        if let existing = try await list(dest).first(where: { $0.name.nfc == name }) {
+                        if let existing = try await list(dest).first(where: { RPath.conflictKey($0.name) == RPath.conflictKey(name) }) {
                             try await trash([existing])
                         }
                     } catch {

@@ -111,7 +111,7 @@
 "Once a week" = "Einmal pro Woche";
 "Day" = "Tag";
 "Time" = "Uhrzeit";
-"If the Mac is off or asleep at that time, the backup runs as soon as it wakes up." = "Ist der Mac zu dieser Zeit ausgeschaltet oder im Ruhezustand, startet das Backup, sobald er aufwacht.";
+"If the Mac is asleep or off at that time, the backup runs when it wakes up or at the next login." = "Ist der Mac zu dieser Zeit im Ruhezustand oder ausgeschaltet, startet das Backup, sobald er aufwacht, oder bei der nächsten Anmeldung.";
 "Versions & safety" = "Versionen & Sicherheit";
 "Keep old versions for %lld days" = "Alte Versionen %lld Tage aufbewahren";
 "Stop if a run would archive more than %lld files" = "Abbrechen, wenn ein Lauf mehr als %lld Dateien archivieren würde";
@@ -336,7 +336,7 @@
 "I understand, use this folder" = "Verstanden, diesen Ordner verwenden";
 "Files you change or delete on the Mac are moved to the versions folder on the box instead of being overwritten, and kept there for %lld days." = "Dateien, die du auf dem Mac änderst oder löschst, werden in den Versionsordner auf der Box verschoben statt überschrieben und dort %lld Tage aufbewahrt.";
 "When should it run?" = "Wann soll es laufen?";
-"The backup runs in the background at this time. If the Mac is asleep or off, it runs as soon as it wakes up." = "Das Backup läuft zu dieser Zeit im Hintergrund. Ist der Mac im Ruhezustand oder ausgeschaltet, startet es, sobald er aufwacht.";
+"The backup runs in the background at this time. If the Mac is asleep or off, it runs when it wakes up or at the next login." = "Das Backup läuft zu dieser Zeit im Hintergrund. Ist der Mac im Ruhezustand oder ausgeschaltet, startet es, sobald er aufwacht, oder bei der nächsten Anmeldung.";
 "You're all set" = "Alles bereit";
 "We recommend a preview first: it lists what the first backup would upload, without changing anything." = "Wir empfehlen zuerst eine Vorschau: Sie zeigt, was das erste Backup hochladen würde, ohne etwas zu verändern.";
 "Choose a subfolder on the Storage Box – the whole box can't be the backup folder, because everything else in it would be moved to the versions folder." = "Wähle einen Unterordner auf der Storage Box – die ganze Box kann nicht der Backup-Ordner sein, weil sonst alles andere darauf in den Versionsordner verschoben würde.";
@@ -380,7 +380,7 @@
 "Backup folder on server" = "Backup-Ordner auf dem Server";
 "Versions folder on server" = "Versionsordner auf dem Server";
 "This server folder already contains %lld items." = "Dieser Serverordner enthält bereits %lld Elemente.";
-"On the first backup, everything in it that isn't in your local folder is moved to the versions folder. The backup folder will then match your Mac exactly." = "Beim ersten Backup wird alles, was nicht im lokalen Ordner liegt, in den Versionsordner verschoben. Danach entspricht der Backup-Ordner genau dem Ordner auf deinem Mac.";
+"On the first backup, everything in it that isn't in your local folder is moved to the versions folder and deleted for good after %lld days. The backup folder will then match your Mac exactly." = "Beim ersten Backup wird alles, was nicht im lokalen Ordner liegt, in den Versionsordner verschoben und nach %lld Tagen endgültig gelöscht. Danach entspricht der Backup-Ordner genau dem Ordner auf deinem Mac.";
 "Allow remote shell commands for checksums" = "Shell-Befehle auf dem Server für Prüfsummen erlauben";
 "Folder paths cannot contain dot or parent-directory segments." = "Ordnerpfade dürfen keine Segmente für das aktuelle oder übergeordnete Verzeichnis enthalten.";
 "Choose a dedicated backup subfolder on the server. The server root cannot be a backup folder." = "Wähle einen eigenen Unterordner für das Backup auf dem Server. Das Stammverzeichnis darf kein Backup-Ordner sein.";
@@ -419,3 +419,10 @@
 /* Release safety fixes */
 "Choose a trash folder." = "Wähle einen Papierkorbordner.";
 "The trash folder must be outside the backup and versions folders." = "Der Papierkorbordner muss außerhalb des Backup- und des Versionsordners liegen.";
+"The local folder has %ld files, but the backup folder on the server already has %ld. Backup blocked for safety: files missing locally would be moved to the versions folder and deleted after %ld days. Use “Run anyway” if this is intended." = "Der lokale Ordner enthält %ld Dateien, der Backup-Ordner auf dem Server aber bereits %ld. Das Backup wurde zur Sicherheit blockiert: Lokal fehlende Dateien würden in den Versionsordner verschoben und nach %ld Tagen gelöscht. Wähle „Trotzdem ausführen“, wenn das beabsichtigt ist.";
+"Could not check the backup folder on the server: %@" = "Der Backup-Ordner auf dem Server konnte nicht geprüft werden: %@";
+"Files in the server folder that aren't in the local folder will be moved to the versions folder and deleted for good after %lld days. If the local folder has far fewer files than the server folder, the next backup waits for you to confirm it." = "Dateien im Serverordner, die nicht im lokalen Ordner liegen, werden in den Versionsordner verschoben und nach %lld Tagen endgültig gelöscht. Hat der lokale Ordner deutlich weniger Dateien als der Serverordner, wartet das nächste Backup auf deine Bestätigung.";
+"Lost contact with this transfer. Start it again." = "Die Verbindung zu dieser Übertragung ist verloren. Starte sie erneut.";
+"Transfers in progress" = "Übertragungen laufen";
+"Quitting stops the active uploads and downloads (%ld). Unfinished files are not completed." = "Beenden stoppt die laufenden Uploads und Downloads (%ld). Unvollständige Dateien werden nicht fertiggestellt.";
+"Quit Anyway" = "Trotzdem beenden";

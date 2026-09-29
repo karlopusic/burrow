@@ -74,6 +74,8 @@ final class TransferManager: ObservableObject {
     @Published private(set) var items: [Transfer] = []
     var maxConcurrent = 2
     private var timer: Timer?
+    /// Consecutive failed status polls per transfer: a daemon that died or restarted has forgotten its jobs.
+    private var missedPolls: [UUID: Int] = [:]
     private static let historyFile = Paths.support + "/transfers.json"
 
     private init() {
@@ -201,6 +203,15 @@ final class TransferManager: ObservableObject {
             let stats = try? await RcloneDaemon.shared.call("core/stats", ["group": "t-\(t.id.uuidString)"])
             let status = try? await RcloneDaemon.shared.call("job/status", ["jobid": job])
             guard let i = index(t.id), items[i].state == .running else { continue }
+            guard status != nil else {
+                missedPolls[t.id, default: 0] += 1
+                if missedPolls[t.id, default: 0] >= 15 {
+                    missedPolls[t.id] = nil
+                    finish(t.id, .failed, L("Lost contact with this transfer. Start it again."))
+                }
+                continue
+            }
+            missedPolls[t.id] = nil
             if let s = stats {
                 items[i].bytes = (s["bytes"] as? NSNumber)?.int64Value ?? items[i].bytes
                 let total = (s["totalBytes"] as? NSNumber)?.int64Value ?? 0

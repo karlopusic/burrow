@@ -149,17 +149,25 @@ enum RPath {
         default: return nested(pa, pb)
         }
     }
-    /// "Report.pdf" → "Report 2.pdf", "Folder" → "Folder 2", avoiding names in `taken`.
-    /// Compares in NFC, so "š" typed as one character and as s + combining caron count as the same name.
+    /// How names are compared for conflicts: NFC, so "š" typed as one character and as s + combining caron are the
+    /// same name, and ignoring case, because on macOS or Windows servers `a.txt` and `A.txt` are one file. On other
+    /// servers the worst case is an unneeded "Keep Both".
+    static func conflictKey(_ name: String) -> String { name.nfc.lowercased() }
+    static func isTaken(_ name: String, _ taken: Set<String>) -> Bool {
+        let key = conflictKey(name)
+        return taken.contains { conflictKey($0) == key }
+    }
+
+    /// "Report.pdf" → "Report 2.pdf", "Folder" → "Folder 2", avoiding names in `taken` (see `conflictKey`).
     static func uniqueName(_ name: String, taken: Set<String>) -> String {
-        let name = name.nfc, taken = Set(taken.map(\.nfc))
-        guard taken.contains(name) else { return name }
+        let name = name.nfc, taken = Set(taken.map(conflictKey))
+        guard taken.contains(conflictKey(name)) else { return name }
         let ext = (name as NSString).pathExtension
         let base = ext.isEmpty ? name : (name as NSString).deletingPathExtension
         var n = 2
         while true {
             let candidate = ext.isEmpty ? "\(base) \(n)" : "\(base) \(n).\(ext)"
-            if !taken.contains(candidate) { return candidate }
+            if !taken.contains(conflictKey(candidate)) { return candidate }
             n += 1
         }
     }

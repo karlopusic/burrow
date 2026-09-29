@@ -30,6 +30,11 @@ struct SettingsView: View {
                 }
                 Text("The backup folder becomes an exact mirror of the local folder. Changed or deleted files move to the versions folder instead of being overwritten.")
                     .font(.caption).foregroundStyle(.secondary)
+                if model.cfg.isComplete && current.backupPair != model.cfg.backupPair {
+                    Label("Files in the server folder that aren't in the local folder will be moved to the versions folder and deleted for good after \(draft.retentionDays) days. If the local folder has far fewer files than the server folder, the next backup waits for you to confirm it.",
+                          systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+                }
             }
             Section("Schedule") {
                 Toggle("Automatic backup", isOn: $draft.scheduleEnabled)
@@ -44,7 +49,7 @@ struct SettingsView: View {
                 }
                 DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
                     .disabled(!draft.scheduleEnabled)
-                Text("If the Mac is off or asleep at that time, the backup runs as soon as it wakes up.")
+                Text("If the Mac is asleep or off at that time, the backup runs when it wakes up or at the next login.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Versions & safety") {
@@ -134,6 +139,8 @@ struct SettingsView: View {
         c.hour = comps.hour ?? 21; c.minute = comps.minute ?? 0
         c.host = c.host.trimmingCharacters(in: .whitespaces)
         c.user = c.user.trimmingCharacters(in: .whitespaces)
+        c.remotePath = c.remotePath.trimmingCharacters(in: .whitespaces)
+        c.versionsPath = c.versionsPath.trimmingCharacters(in: .whitespaces)
         return c
     }
 

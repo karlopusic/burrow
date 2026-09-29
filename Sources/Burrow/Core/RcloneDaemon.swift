@@ -33,6 +33,7 @@ final class RcloneDaemon: @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         if let p = process, p.isRunning { return }
         Self.killStale()
+        Self.rotateLog()
         port = Self.freePort()
         let p = Process()
         p.executableURL = URL(fileURLWithPath: Paths.rclone)
@@ -72,6 +73,15 @@ final class RcloneDaemon: @unchecked Sendable {
         env["RCLONE_RC_USER"] = user
         env["RCLONE_RC_PASS"] = pass
         return env
+    }
+
+    /// rcd.log is appended to by every session; keep one previous file and start fresh past 5 MB.
+    private static func rotateLog() {
+        let log = Paths.logs + "/rcd.log", old = Paths.logs + "/rcd.1.log"
+        let size = (try? FileManager.default.attributesOfItem(atPath: log)[.size] as? Int) ?? 0
+        guard size > 5 * 1024 * 1024 else { return }
+        try? FileManager.default.removeItem(atPath: old)
+        try? FileManager.default.moveItem(atPath: log, toPath: old)
     }
 
     /// An rcd left behind by a crashed session would keep a port and SFTP connections open.

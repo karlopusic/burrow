@@ -8,6 +8,7 @@ import Darwin
 ///    `versionsPath` instead of being overwritten/deleted on the box.
 ///  - Blocks the run if the local file count dropped sharply since the last good backup
 ///    (unmounted disk, accidental delete, ransomware) until the user confirms with "Run anyway".
+///    The first run for a local/remote pair compares with the server folder instead (new Mac, changed folder).
 ///  - `--max-delete` caps how many files a single run may archive.
 enum Runner {
     /// rclone uploads to "<name>.<8 hex>.partial" and renames when done; a killed run can leave these behind.
@@ -22,8 +23,11 @@ enum Runner {
         let cfg = AppConfig.load()
         let fm = FileManager.default
 
+        if trigger == .schedule {
+            let installed = (try? fm.attributesOfItem(atPath: Paths.agentPlist))?[.modificationDate] as? Date
+            guard isDue(cfg, now: Date(), lastAttempt: StatusStore.load().lastBackup?.start, installed: installed) else { return 0 }
+        }
         let force = fm.fileExists(atPath: Paths.forceFlag)
-        try? fm.removeItem(atPath: Paths.stopFlag)
 
         // A unique folder per run: two manual/scheduled runs may start in the same minute.
         let stamp = stampFormatter.string(from: Date()) + "-" + String(UUID().uuidString.prefix(8))
@@ -39,6 +43,7 @@ enum Runner {
             if trigger == .schedule { notify(L("Skipped"), L("A backup is already running.")) }
             return 0
         }
+        try? fm.removeItem(atPath: Paths.stopFlag)   // only now: the stop request may belong to the running backup
 
         func finish(_ result: RunResult, _ message: String) -> Int32 {
             rec.end = Date(); rec.result = result; rec.message = message
@@ -46,7 +51,7 @@ enum Runner {
             StatusStore.update { s in
                 s.running = nil
                 s.runs.insert(r, at: 0)
-                if !r.dryRun && r.result == .ok { s.lastLocalCount = r.localFiles }
+                if !r.dryRun && r.result == .ok { s.lastLocalCount = r.localFiles; s.lastCountPair = cfg.backupPair }
             }
             pruneLogs()
             switch result {
@@ -75,9 +80,23 @@ enum Runner {
         rec.localFiles = count
         guard count >= 0 else { return finish(.error, L("No access to the local folder. Open the app and allow access to the folder.")) }
         guard count > 0 else { return finish(.blocked, L("The local folder is empty – backup blocked.")) }
-        if !dryRun, let last = StatusStore.load().lastLocalCount,
-           Double(count) < Double(last) * cfg.minFileRatio, !force {
-            return finish(.blocked, L("The local folder has %ld files, last time it had %ld. Backup blocked for safety – use “Run anyway” if this is intended.", count, last))
+        let status = StatusStore.load()
+        if !dryRun && !force {
+            if let last = status.lastLocalCount, status.lastCountPair == cfg.backupPair {
+                if Double(count) < Double(last) * cfg.minFileRatio {
+                    return finish(.blocked, L("The local folder has %ld files, last time it had %ld. Backup blocked for safety – use “Run anyway” if this is intended.", count, last))
+                }
+            } else {
+                // First backup of this pair: files on the server that are missing locally would be archived and,
+                // after the retention period, deleted. Catches a nearly empty folder pointed at an existing backup.
+                let remote = remoteFileCount(cfg)
+                guard let n = remote.count else {
+                    return finish(.error, L("Could not check the backup folder on the server: %@", remote.error ?? ""))
+                }
+                if Double(count) < Double(n) * cfg.minFileRatio {
+                    return finish(.blocked, L("The local folder has %ld files, but the backup folder on the server already has %ld. Backup blocked for safety: files missing locally would be moved to the versions folder and deleted after %ld days. Use “Run anyway” if this is intended.", count, n, cfg.retentionDays))
+                }
+            }
         }
         if force && !dryRun { try? fm.removeItem(atPath: Paths.forceFlag) }
 
@@ -92,6 +111,11 @@ enum Runner {
         for x in cfg.excludes + builtinExcludes { a += ["--exclude", x] }
         if dryRun { a.append("--dry-run") }
 
+        // Stop pressed while counting files: there is no rclone process to end yet.
+        if fm.fileExists(atPath: Paths.stopFlag) {
+            try? fm.removeItem(atPath: Paths.stopFlag)
+            return finish(.stopped, L("Stopped by user. The next run continues where this one left off."))
+        }
         let p = Process()
         p.executableURL = URL(fileURLWithPath: Paths.rclone)
         p.arguments = a
@@ -125,6 +149,20 @@ enum Runner {
             return finish(.ok, done + " " + L("Names that exist twice on the server with differently encoded letters: %ld (e.g. “%@”). One copy of each is skipped – see the log.", sum.duplicates.count, first))
         }
         return finish(.ok, done)
+    }
+
+    /// Whether a scheduled start should back up: only if a scheduled time has passed since the last backup attempt
+    /// and since the agent was installed. So the start at login catches up on a missed time and otherwise does
+    /// nothing, and installing the agent (which also starts it) never triggers a surprise backup.
+    static func isDue(_ cfg: AppConfig, now: Date, lastAttempt: Date?, installed: Date?,
+                      calendar: Calendar = .current) -> Bool {
+        guard cfg.scheduleEnabled else { return false }
+        var at = DateComponents(); at.hour = cfg.hour; at.minute = cfg.minute; at.second = 0
+        if cfg.frequency == .weekly { at.weekday = cfg.weekday % 7 + 1 }   // Calendar: 1 = Sunday; config: 7 = Sunday
+        // a few seconds of slack: launchd may start the job a moment before the minute turns
+        guard let slot = calendar.nextDate(after: now.addingTimeInterval(5), matching: at,
+                                           matchingPolicy: .nextTime, direction: .backward) else { return true }
+        return slot > (lastAttempt ?? .distantPast) && slot > (installed ?? .distantPast)
     }
 
     static let stampFormatter: DateFormatter = {
@@ -169,16 +207,41 @@ enum Runner {
         return readFailed ? -1 : n
     }
 
+    /// Files in the server's backup folder that a sync compares with (same excludes); 0 if it doesn't exist yet.
+    static func remoteFileCount(_ cfg: AppConfig) -> (count: Int?, error: String?) {
+        var a = ["size", "--json", cfg.remote]
+        for x in cfg.excludes + builtinExcludes { a += ["--exclude", x] }
+        let r = rclone(a)
+        if r.code != 0 {
+            return r.err.contains("directory not found") ? (0, nil) : (nil, lastErrorLine(r.err))
+        }
+        let json = (try? JSONSerialization.jsonObject(with: Data(r.out.utf8))) as? [String: Any]
+        guard let n = (json?["count"] as? NSNumber)?.intValue else { return (nil, lastErrorLine(r.out + r.err)) }
+        return (n, nil)
+    }
+
     /// Deletes dated version folders older than the retention window. Only folders named like a stamp are touched.
     static func pruneVersions(_ cfg: AppConfig) {
-        let r = rclone(["lsf", "--dirs-only", cfg.versionsRemote])
+        let r = rclone(["lsf", "--dirs-only", "--format", "tp", "--time-format", "unix", cfg.versionsRemote])
         guard r.code == 0 else { return }
-        let cutoff = Date().addingTimeInterval(-Double(cfg.retentionDays) * 86400)
-        for line in r.out.split(separator: "\n") {
-            let name = line.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-            guard let d = archiveDate(name), d < cutoff else { continue }
+        let folders = r.out.split(separator: "\n").compactMap { line -> (name: String, serverTime: Date?)? in
+            guard let i = line.firstIndex(of: ";") else { return nil }
+            let name = line[line.index(after: i)...].trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            return (name, Double(line[..<i]).map { Date(timeIntervalSince1970: $0) })
+        }
+        for name in expiredVersions(folders, now: Date(), retentionDays: cfg.retentionDays) {
             rclone(["purge", "\(cfg.versionsRemote)/\(name)"])
         }
+    }
+
+    /// Dated version folders past the retention window. Folder names carry the Mac's clock; the cutoff never runs
+    /// ahead of the server's clock, read from the newest folder's server-side time (set by the server when a run
+    /// created it). A Mac clock that jumped years ahead would otherwise delete every version at once. In quiet
+    /// periods this keeps versions a little longer, never shorter. Without server times nothing is deleted.
+    static func expiredVersions(_ folders: [(name: String, serverTime: Date?)], now: Date, retentionDays: Int) -> [String] {
+        guard let serverNow = folders.filter({ archiveDate($0.name) != nil }).compactMap(\.serverTime).max() else { return [] }
+        let cutoff = min(now, serverNow.addingTimeInterval(86400)).addingTimeInterval(-Double(retentionDays) * 86400)
+        return folders.compactMap { f in archiveDate(f.name).flatMap { $0 < cutoff ? f.name : nil } }
     }
 
     static func pruneLogs() {

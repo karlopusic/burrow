@@ -109,6 +109,24 @@ enum SelfTest {
         check(m.error != nil && m.items.first { $0.name == "report.txt" }?.size == 6, "rename refuses to overwrite")
         m.error = nil
 
+        // case-only rename: on servers that ignore case the new name is the same file, so it goes via a temporary name
+        if let f = m.items.first(where: { $0.name == "renamed.txt" }) { m.rename(f, to: "RENAMED.txt") }
+        await waitIdle(m)
+        let caseNames = await names(m, root)
+        check(m.error == nil && caseNames.contains("RENAMED.txt") && !caseNames.contains("renamed.txt"), "case-only rename")
+        if let f = m.items.first(where: { $0.name == "RENAMED.txt" }) { m.rename(f, to: "renamed.txt") }
+        await waitIdle(m)
+        m.error = nil
+
+        // a name differing only in case is a conflict (one file on macOS/Windows servers)
+        let caseDir = local.appendingPathComponent("case")
+        try? FileManager.default.createDirectory(at: caseDir, withIntermediateDirectories: true)
+        try? "upper".write(to: caseDir.appendingPathComponent("REPORT.TXT"), atomically: true, encoding: .utf8)
+        var asked = false
+        m.upload([caseDir.appendingPathComponent("REPORT.TXT")], choose: { _ in asked = true; return .skip })
+        await waitTransfers(); await m.reload()
+        check(asked && m.items.first { $0.name == "report.txt" }?.size == 6, "upload asks when a name differs only in case")
+
         // Unicode: NFD names (s + combining caron) are stored as NFC, and both spellings count as one name.
         // String == treats the two as equal, so compare scalars.
         func stored(_ name: String) -> Bool { m.items.contains { $0.name.unicodeScalars.elementsEqual(name.nfc.unicodeScalars) } }

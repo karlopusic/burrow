@@ -87,11 +87,16 @@ echo "version 2" > "$SRC/a.txt"   # different size: same-second, same-size edits
 "$APP_EXE" --dry-run --trigger=manual >/dev/null 2>&1 || true
 check "preview changes nothing" '[[ "$(cat "$SERVER_ROOT/dst/a.txt")" == v1 ]]'
 
+# an expired dated folder is pruned after a run; a folder not named like a stamp is never touched
+mkdir -p "$SERVER_ROOT/_versions/2020-01-01_000000-deadbeef" "$SERVER_ROOT/_versions/keep me"
+echo old > "$SERVER_ROOT/_versions/2020-01-01_000000-deadbeef/old.txt"; echo mine > "$SERVER_ROOT/_versions/keep me/x.txt"
 rm "$SRC/sub/b.txt"
 check "second backup succeeds" 'backup && [[ "$(last_result)" == ok ]]'
 check "changed file uploaded" '[[ "$(cat "$SERVER_ROOT/dst/a.txt")" == "version 2" ]]'
 check "old version kept in versions folder" '[[ -n "$(versions a.txt)" && "$(cat "$(versions a.txt)")" == v1 ]]'
 check "deleted file moved to versions folder" '[[ ! -e "$SERVER_ROOT/dst/sub/b.txt" && -n "$(versions b.txt)" ]]'
+check "expired version folder pruned" '[[ ! -e "$SERVER_ROOT/_versions/2020-01-01_000000-deadbeef" ]]'
+check "unrelated folder in versions kept" '[[ -f "$SERVER_ROOT/_versions/keep me/x.txt" ]]'
 
 # A failed rclone run must not remove an unrelated server file merely because its name resembles a temp file.
 echo keep > "$SERVER_ROOT/dst/manual.deadbeef.partial"
@@ -113,8 +118,20 @@ echo nfd > "$SRC/$NFD"
 check "NFD name backed up" 'backup && [[ "$(last_result)" == ok ]]'
 check "server name is NFC" 'python3 -c "import os,sys,unicodedata; n=[f for f in os.listdir(sys.argv[1]) if f.startswith(\"Izvje\")]; sys.exit(0 if n and all(f == unicodedata.normalize(\"NFC\", f) for f in n) and len(n) == 1 else 1)" "$SERVER_ROOT/dst"'
 
+# A different, nearly empty local folder pointed at the existing backup: the first run for the new pair compares
+# with the server folder, since the last local count belongs to the old folder.
+SRC2="$WORK/src2"; mkdir -p "$SRC2"; echo lone > "$SRC2/lone.txt"
+set_local() { python3 -c 'import json,sys; p=sys.argv[1]; c=json.load(open(p)); c["localPath"]=sys.argv[2]; json.dump(c, open(p,"w"))' "$SUPPORT/config.json" "$1"; }
+set_local "$SRC2"
+check "new local folder with far fewer files is blocked" '! backup && [[ "$(last_result)" == blocked && -f "$SERVER_ROOT/dst/a.txt" ]]'
+check "blocked again on the next run" '! backup && [[ "$(last_result)" == blocked && -f "$SERVER_ROOT/dst/f7.txt" ]]'
+touch "$SUPPORT/force-next"
+check "run anyway mirrors the new folder" 'backup && [[ "$(last_result)" == ok && -f "$SERVER_ROOT/dst/lone.txt" && ! -e "$SERVER_ROOT/dst/a.txt" ]]'
+check "next run of the new pair is not blocked" 'backup && [[ "$(last_result)" == ok ]]'
+set_local "$SRC"
+
 rm -rf "$SRC"/*
-check "empty source is refused" '! backup && [[ "$(last_result)" == blocked && -f "$SERVER_ROOT/dst/a.txt" ]]'
+check "empty source is refused" '! backup && [[ "$(last_result)" == blocked && -f "$SERVER_ROOT/dst/lone.txt" ]]'
 
 echo
 if (( FAILED == 0 )); then echo "INTEGRATION: ALL PASSED"; else echo "INTEGRATION: $FAILED FAILED"; exit 1; fi
