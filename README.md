@@ -20,21 +20,11 @@
 > server. Read [What Burrow is – and isn't](#what-burrow-is--and-isnt) before you rely on it, and keep a second,
 > independent copy of anything you can't afford to lose.
 
-## Screenshots
-
-Captured from Burrow on macOS with fictional project files and an isolated local SFTP server. The backup history shown here is sample data.
-
-**Backup status and recent runs**
-
-![Burrow backup status with recent runs and a preview](docs/screenshots/status.png)
-
-**Browse files on an SFTP server**
-
-![Burrow browsing fictional project files on an SFTP server](docs/screenshots/browser.png)
-
-**Find and restore older versions**
-
-![Burrow showing archived versions of fictional files](docs/screenshots/versions.png)
+<p align="center">
+  <img src="docs/screenshots/status.png" width="600" alt="Burrow backup status with recent runs and a preview">
+  <br>
+  <sub>Screenshots show fictional project files on a local test server; the backup history is sample data.</sub>
+</p>
 
 ---
 
@@ -55,6 +45,10 @@ questions that matter: *When was my last good backup? What changed? Can I get th
 
 ### File browser
 
+<p align="center">
+  <img src="docs/screenshots/browser.png" width="600" alt="Burrow browsing fictional project files on an SFTP server">
+</p>
+
 - **Bookmarks** for any number of SFTP servers (Storage Box, your own VPS, client servers) – SSH key or
   password (stored in the macOS Keychain).
 - **Browse** in list or icon view, sort by name/date/size/kind, path bar, back/forward, hidden files toggle,
@@ -69,6 +63,10 @@ questions that matter: *When was my last good backup? What changed? Can I get th
   copy goes to the trash) or *Skip*. Permanent deletion only happens inside the trash, after confirmation.
 
 ### Backup
+
+<p align="center">
+  <img src="docs/screenshots/versions.png" width="600" alt="Burrow showing archived versions of fictional files, ready to restore">
+</p>
 
 - **Scheduled backups** via a LaunchAgent – daily or weekly, runs even when the app is closed, catches
   up after sleep and, after a shutdown, at the next login.
