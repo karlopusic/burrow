@@ -56,6 +56,8 @@ final class BrowserModel: ObservableObject {
     @Published var refreshing = false
 
     private let cache: DirCache
+    /// Set when the trash folder is unsafe (empty, the root, or overlapping the backup): "Delete" and "Empty Trash" refuse.
+    let trashProblem: String?
     private var prefetchTask: Task<Void, Never>?
     private var lastPathKey: String { "lastPath.\(bookmark.id.uuidString)" }
 
@@ -70,6 +72,9 @@ final class BrowserModel: ObservableObject {
     init(bookmark: Bookmark) {
         self.bookmark = bookmark
         self.cache = DirCache.forBookmark(bookmark.id)
+        let cfg = AppConfig.load()
+        self.trashProblem = bookmark.trashProblem(
+            protecting: cfg.isBackupServer(bookmark) ? [cfg.remotePath, cfg.versionsPath] : [])
         let start = bookmark.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         self.cwd = UserDefaults.standard.string(forKey: "lastPath.\(bookmark.id.uuidString)") ?? start
         if let cached = cache.get(cwd) { items = cached.items }   // instant first paint, even before connecting
@@ -103,7 +108,7 @@ final class BrowserModel: ObservableObject {
     var trashPath: String {
         absolute ? RPath.join(bookmark.path, bookmark.trashFolder) : bookmark.trashFolder
     }
-    var inTrash: Bool { cwd == trashPath || cwd.hasPrefix(trashPath + "/") }
+    var inTrash: Bool { trashProblem == nil && (cwd == trashPath || cwd.hasPrefix(trashPath + "/")) }
 
     var visibleItems: [RemoteItem] {
         let base = searchResults ?? items
@@ -157,7 +162,9 @@ final class BrowserModel: ObservableObject {
         Task { await fetchCurrent(dir, keepError: false) }
     }
     func goUp() { if canGoUp { open(RPath.parent(cwd)) } }
-    func openTrash() { open(trashPath) }
+    func openTrash() {
+        if let trashProblem { error = trashProblem } else { open(trashPath) }
+    }
 
     /// Fresh listing of the current folder. `keepError`: a refresh after an operation must not hide its error.
     func reload(keepError: Bool = false) async {
@@ -265,18 +272,23 @@ final class BrowserModel: ObservableObject {
 
     // MARK: file operations
 
+    private static func message(_ error: Error) -> String {
+        (error as? RcloneError)?.message ?? error.localizedDescription
+    }
+
     private func run(_ label: String, _ work: @escaping () async throws -> Void) {
         busy = label
         Task {
             do { try await work() } catch {
-                self.error = (error as? RcloneError)?.message ?? error.localizedDescription
+                self.error = Self.message(error)
             }
             busy = nil
             await reload(keepError: true)
         }
     }
 
-    /// Server-side move of a file or folder. Refuses to overwrite anything.
+    /// Server-side move of a file or folder. Refuses to overwrite anything: whatever already exists at `dest`, even if
+    /// it appeared after the conflict check, is skipped and stays at the source, and the move then fails.
     private func move(_ item: RemoteItem, to dest: String) async throws {
         // SFTP rename needs the target's parent folder to exist (e.g. a new dated trash folder)
         let parent = RPath.parent(dest)
@@ -286,18 +298,28 @@ final class BrowserModel: ObservableObject {
             if item.isDir { cache.removeTree(item.path) }
         }
         if item.isDir {
-            _ = try await RcloneDaemon.shared.call("sync/move", ["srcFs": fs(item.path), "dstFs": fs(dest), "deleteEmptySrcDirs": true])
+            _ = try await RcloneDaemon.shared.call("sync/move", ["srcFs": fs(item.path), "dstFs": fs(dest), "deleteEmptySrcDirs": true,
+                                                                "_config": RcloneDaemon.noOverwrite])
             // sync/move leaves the (now empty) source folder itself behind
             _ = try? await RcloneDaemon.shared.call("operations/rmdirs", ["fs": fsRoot, "remote": item.path, "leaveRoot": false])
         } else {
             _ = try await RcloneDaemon.shared.call("operations/movefile",
-                ["srcFs": fsRoot, "srcRemote": item.path, "dstFs": fsRoot, "dstRemote": dest])
+                ["srcFs": fsRoot, "srcRemote": item.path, "dstFs": fsRoot, "dstRemote": dest,
+                 "_config": RcloneDaemon.noOverwrite])
         }
+        if try await exists(item.path) { throw RcloneError(message: L("“%@” already exists.", RPath.name(dest))) }
     }
 
-    /// Conflict checks never trust the cache: a stale listing could let a move overwrite a file.
+    private func exists(_ path: String) async throws -> Bool {
+        let r = try await RcloneDaemon.shared.call("operations/stat", ["fs": fsRoot, "remote": path])
+        return r["item"] is [String: Any]
+    }
+
+    /// Conflict checks never trust the cache: a stale listing could let a move overwrite a file. A folder that doesn't
+    /// exist yet is empty; any other failure stops the operation instead of assuming "no conflicts".
     private func names(in dir: String) async throws -> Set<String> {
-        Set(try await list(dir).map(\.name.nfc))
+        do { return Set(try await list(dir).map(\.name.nfc)) }
+        catch let e as RcloneError where e.message.hasSuffix("directory not found") { return [] }
     }
 
     func newFolder(_ name: String) {
@@ -324,7 +346,7 @@ final class BrowserModel: ObservableObject {
 
     // MARK: trash
     //
-    // Layout: <trash>/<yyyy-MM-dd_HHmmss>/<item name>, plus <trash>/<stamp>/.origins.json = {name: original path}.
+    // Layout: <trash>/<yyyy-MM-dd_HHmmss-random>/<item name>, plus <trash>/<stamp>/.origins.json = {name: original path}.
     // Deleted items appear directly in their dated folder (like the Finder trash) and "Put Back" knows where they came from.
 
     private var origins: [String: [String: String]] = [:]   // stamp folder path → name → original path
@@ -335,7 +357,9 @@ final class BrowserModel: ObservableObject {
 
     /// Moves items into a new dated trash folder. Used by "Move to Trash" and by "Replace" during uploads.
     func trash(_ selection: [RemoteItem]) async throws {
-        let stampDir = RPath.join(trashPath, Self.trashStamp.string(from: Date()))
+        if let trashProblem { throw RcloneError(message: trashProblem) }
+        // a new folder per call: two deletes in the same second (or in two windows) never share names
+        let stampDir = RPath.join(trashPath, Self.trashStamp.string(from: Date()) + "-" + UUID().uuidString.prefix(6).lowercased())
         var map = try await loadOrigins(stampDir)
         var taken = Set(map.keys)
         for item in selection {
@@ -405,11 +429,14 @@ final class BrowserModel: ObservableObject {
                 var map = try await loadOrigins(stampDir)
                 guard let orig = map[item.name] else { continue }
                 let parent = RPath.parent(orig)
-                let taken = (try? await names(in: parent)) ?? []
+                let taken = try await names(in: parent)
                 try await move(item, to: RPath.join(parent, RPath.uniqueName(RPath.name(orig), taken: taken)))
                 map[item.name] = nil
                 if map.isEmpty {
-                    _ = try? await RcloneDaemon.shared.call("operations/purge", ["fs": fsRoot, "remote": stampDir])
+                    // rmdir, never purge: an item whose origin was never recorded must stay in the trash
+                    _ = try? await RcloneDaemon.shared.call("operations/deletefile",
+                        ["fs": fsRoot, "remote": RPath.join(stampDir, ".origins.json")])
+                    _ = try? await RcloneDaemon.shared.call("operations/rmdir", ["fs": fsRoot, "remote": stampDir])
                     origins[stampDir] = nil
                     cache.removeTree(stampDir); cache.markStale(trashPath)
                 } else {
@@ -422,6 +449,7 @@ final class BrowserModel: ObservableObject {
     /// Only ever called for items already in the trash, after explicit confirmation.
     func deletePermanently(_ selection: [RemoteItem]) {
         run(L("Deleting…")) { [self] in
+            if let trashProblem { throw RcloneError(message: trashProblem) }
             for item in selection where item.path.hasPrefix(trashPath + "/") {
                 try await removeForGood(item)
             }
@@ -430,7 +458,8 @@ final class BrowserModel: ObservableObject {
 
     func emptyTrash() {
         run(L("Emptying trash…")) { [self] in
-            for item in try await list(trashPath) {
+            if let trashProblem { throw RcloneError(message: trashProblem) }
+            for item in try await list(trashPath) where item.path.hasPrefix(trashPath + "/") {
                 try await removeForGood(item)
             }
         }
@@ -469,12 +498,14 @@ final class BrowserModel: ObservableObject {
             pendingOps += 1
             Task {
                 defer { pendingOps -= 1 }
-                var taken = (try? await names(in: dest)) ?? []
-                for item in clip.items {
-                    let n = RPath.uniqueName(item.name, taken: taken)
-                    taken.insert(n)
-                    enqueueRemoteCopy(item, to: RPath.join(dest, n))
-                }
+                do {
+                    var taken = try await names(in: dest)
+                    for item in clip.items {
+                        let n = RPath.uniqueName(item.name, taken: taken)
+                        taken.insert(n)
+                        enqueueRemoteCopy(item, to: RPath.join(dest, n))
+                    }
+                } catch { self.error = Self.message(error) }
             }
         }
     }
@@ -483,11 +514,13 @@ final class BrowserModel: ObservableObject {
         pendingOps += 1
         Task {
             defer { pendingOps -= 1 }
-            for item in selection {
-                let parent = RPath.parent(item.path)
-                let taken = (try? await names(in: parent)) ?? []
-                enqueueRemoteCopy(item, to: RPath.join(parent, RPath.uniqueName(item.name, taken: taken)))
-            }
+            do {
+                for item in selection {
+                    let parent = RPath.parent(item.path)
+                    let taken = try await names(in: parent)
+                    enqueueRemoteCopy(item, to: RPath.join(parent, RPath.uniqueName(item.name, taken: taken)))
+                }
+            } catch { self.error = Self.message(error) }
         }
     }
 
@@ -528,36 +561,45 @@ final class BrowserModel: ObservableObject {
         pendingOps += 1
         Task {
             defer { pendingOps -= 1 }
-            var taken = (try? await names(in: dest)) ?? []
-            for url in urls {
-                var isDir: ObjCBool = false
-                guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) else { continue }
-                var name = url.lastPathComponent.nfc
-                if taken.contains(name) {
-                    switch await choose(name) {
-                    case .skip: continue
-                    case .keepBoth: name = RPath.uniqueName(name, taken: taken)
-                    case .replace:
-                        let existing = ((try? await list(dest)) ?? []).first { $0.name.nfc == name }
-                        if let existing {
-                            do {
-                                try await trash([existing])
-                            } catch {
-                                self.error = error.localizedDescription
-                                continue
-                            }
+            let taken: Set<String>
+            do { taken = try await names(in: dest) } catch {
+                self.error = Self.message(error)
+                return
+            }
+            await upload(urls, into: dest, taken: taken, choose: choose)
+            await reload(keepError: true)
+        }
+    }
+
+    private func upload(_ urls: [URL], into dest: String, taken: Set<String>,
+                        choose: @escaping (String) async -> ConflictChoice) async {
+        var taken = taken
+        for url in urls {
+            var isDir: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) else { continue }
+            var name = url.lastPathComponent.nfc
+            if taken.contains(name) {
+                switch await choose(name) {
+                case .skip: continue
+                case .keepBoth: name = RPath.uniqueName(name, taken: taken)
+                case .replace:
+                    do {
+                        if let existing = try await list(dest).first(where: { $0.name.nfc == name }) {
+                            try await trash([existing])
                         }
+                    } catch {
+                        self.error = Self.message(error)
+                        continue
                     }
                 }
-                taken.insert(name)
-                let remote = RPath.join(dest, name)
-                let t = Transfer(kind: .upload, name: name, server: bookmark.displayName, isDir: isDir.boolValue,
-                                 srcFs: isDir.boolValue ? url.path : "/", srcRemote: isDir.boolValue ? nil : String(url.path.dropFirst()),
-                                 dstFs: isDir.boolValue ? fs(remote) : fsRoot, dstRemote: isDir.boolValue ? nil : remote,
-                                 destLabel: "\(bookmark.displayName): \(remote)", refreshKey: refreshKey(dest))
-                TransferManager.shared.enqueue(t)
             }
-            await reload(keepError: true)
+            taken.insert(name)
+            let remote = RPath.join(dest, name)
+            let t = Transfer(kind: .upload, name: name, server: bookmark.displayName, isDir: isDir.boolValue,
+                             srcFs: isDir.boolValue ? url.path : "/", srcRemote: isDir.boolValue ? nil : String(url.path.dropFirst()),
+                             dstFs: isDir.boolValue ? fs(remote) : fsRoot, dstRemote: isDir.boolValue ? nil : remote,
+                             destLabel: "\(bookmark.displayName): \(remote)", refreshKey: refreshKey(dest))
+            TransferManager.shared.enqueue(t)
         }
     }
 

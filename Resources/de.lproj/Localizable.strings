@@ -31,6 +31,12 @@
 "Could not move the app: %@" = "Die App konnte nicht bewegt werden: %@";
 "macOS will ask once whether Burrow may read this folder. Choose “Allow” so scheduled backups can read it." = "macOS fragt einmal, ob Burrow diesen Ordner lesen darf. Wähle „Erlauben“, damit geplante Backups ihn lesen können.";
 "Could not read the existing keys on the server: %@" = "Die vorhandenen Schlüssel auf dem Server konnten nicht gelesen werden: %@";
+"Could not import the previous installation" = "Die vorherige Installation konnte nicht importiert werden";
+"The previous backup schedule was kept. Resolve the import problem before setting up a new schedule, then reopen Burrow." = "Der bisherige Sicherungszeitplan wurde beibehalten. Beheben Sie das Importproblem, bevor Sie einen neuen Zeitplan einrichten, und öffnen Sie Burrow erneut.";
+"Append the public key from %@ to the existing .ssh/authorized_keys on the server, then check the connection." = "Fügen Sie den öffentlichen Schlüssel aus %@ zur vorhandenen Datei .ssh/authorized_keys auf dem Server hinzu und prüfen Sie dann die Verbindung.";
+"Enter your Storage Box password once. Burrow creates a key and installs it if the box has no existing keys. Otherwise, add the shown public key manually. The password is not stored." = "Geben Sie das Passwort Ihrer Storage Box einmal ein. Burrow erstellt einen Schlüssel und installiert ihn, wenn auf der Box noch keine Schlüssel vorhanden sind. Andernfalls fügen Sie den angezeigten öffentlichen Schlüssel manuell hinzu. Das Passwort wird nicht gespeichert.";
+"Enter your account password once. Burrow creates a key and installs it if the server has no existing keys. Otherwise, add the shown public key manually. The password is not stored." = "Geben Sie Ihr Kontopasswort einmal ein. Burrow erstellt einen Schlüssel und installiert ihn, wenn auf dem Server noch keine Schlüssel vorhanden sind. Andernfalls fügen Sie den angezeigten öffentlichen Schlüssel manuell hinzu. Das Passwort wird nicht gespeichert.";
+"The server's key file changed during setup. Check its contents and try again." = "Die Schlüsseldatei auf dem Server wurde während der Einrichtung geändert. Prüfen Sie ihren Inhalt und versuchen Sie es erneut.";
 
 /* Overview */
 "Last successful backup: %@" = "Letztes erfolgreiches Backup: %@";
@@ -409,3 +415,7 @@
 
 /* Rename to Burrow */
 "A backup started by the previous version of the app is still running. Settings will be imported automatically once it finishes – reopen this app then." = "Ein von der vorherigen Version der App gestartetes Backup läuft noch. Die Einstellungen werden automatisch übernommen, sobald es fertig ist – öffne die App dann erneut.";
+
+/* Release safety fixes */
+"Choose a trash folder." = "Wähle einen Papierkorbordner.";
+"The trash folder must be outside the backup and versions folders." = "Der Papierkorbordner muss außerhalb des Backup- und des Versionsordners liegen.";

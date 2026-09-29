@@ -35,9 +35,11 @@ final class AppModel: ObservableObject {
     @Published var versionFiles: [RemoteFile] = []
     @Published var loadingVersions = false
     @Published var loadingFiles = false
-    @Published var archivedFiles: [String: [ArchivedFile]] = [:]
-    @Published var archiveIndexLoading = false
-    @Published var archiveIndexError: String?
+    @Published var versionsError: String?
+    @Published var versionFilesError: String?
+    @Published var historyEntries: [ArchivedFile] = []
+    @Published var historyLoading = false
+    @Published var historyError: String?
     @Published var toast: String?
     @Published var connection: String?
     @Published var localAccess = true
@@ -49,7 +51,13 @@ final class AppModel: ObservableObject {
 
     private var timer: Timer?
     private var pendingAgentInstall = false
-    private var archiveIndexKey: String?
+    private var versionFileCache: [String: [RemoteFile]] = [:]
+    private var historyCache: [String: [ArchivedFile]] = [:]
+    private var versionsRequest = UUID()
+    private var filesRequest = UUID()
+    private var historyRequest = UUID()
+    private var historyTask: Task<Void, Never>?
+    private var filesTask: Task<Void, Never>?
 
     init() {
         Paths.ensure()
@@ -78,13 +86,16 @@ final class AppModel: ObservableObject {
     var needsSetup: Bool { !cfg.isComplete }
 
     func reload() {
-        status = StatusStore.load()
+        let updated = StatusStore.load()
+        if status.lastSuccess?.end != updated.lastSuccess?.end { invalidateVersionQueries() }
+        status = updated
         progress = status.running.map { LogParser.progress($0.logFile) }
         if pendingAgentInstall && !isRunning { installAgentWhenIdle() }
     }
 
     /// `launchctl bootout` would kill a running scheduled backup, so the agent is only (re)installed when idle.
     func installAgentWhenIdle() {
+        guard migration == .none || migration == .migrated else { return }
         if isRunning { pendingAgentInstall = true; return }
         pendingAgentInstall = false
         let c = cfg
@@ -163,6 +174,7 @@ final class AppModel: ObservableObject {
     }
 
     func saveConfig(_ new: AppConfig) {
+        if cfg != new { invalidateVersionQueries() }
         cfg = new
         cfg.save()
         installAgentWhenIdle()
@@ -283,7 +295,8 @@ final class AppModel: ObservableObject {
     static let onboardingSkippedKey = "onboardingSkipped"
 
     var shouldOfferOnboarding: Bool {
-        needsSetup && bookmarks.isEmpty && !UserDefaults.standard.bool(forKey: Self.onboardingSkippedKey)
+        needsSetup && bookmarks.isEmpty && (migration == .none || migration == .migrated)
+            && !UserDefaults.standard.bool(forKey: Self.onboardingSkippedKey)
     }
 
     func skipOnboarding() {
@@ -302,57 +315,89 @@ final class AppModel: ObservableObject {
 
     // MARK: remote queries
 
-    /// Archive files are indexed once in the background, then looked up by relative backup path in the browser.
-    func ensureArchiveIndex(force: Bool = false) {
-        guard cfg.isComplete else { return }
+    private func invalidateVersionQueries() {
+        versionsRequest = UUID(); filesRequest = UUID(); historyRequest = UUID()
+        filesTask?.cancel(); historyTask?.cancel()
+        versions = []; versionFiles = []; historyEntries = []
+        loadingVersions = false; loadingFiles = false; historyLoading = false
+        versionsError = nil; versionFilesError = nil; historyError = nil
+        versionFileCache.removeAll(); historyCache.removeAll()
+    }
+
+    // History is fetched for one file when its sheet opens. The old eager recursive scan
+    // visited every file in every version and could take minutes on an SFTP server.
+    func loadHistory(_ path: String, force: Bool = false) {
         let remote = cfg.versionsRemote
-        let key = remote + "|" + String(status.lastSuccess?.end?.timeIntervalSince1970 ?? 0)
-        guard force || archiveIndexKey != key else { return }
-        if archiveIndexLoading && archiveIndexKey == key { return }
-        archiveIndexKey = key
-        archiveIndexLoading = true
-        archiveIndexError = nil
-        Task.detached {
-            let r = rclone(["lsjson", "-R", "--files-only", remote])
-            if r.code != 0, lastErrorLine(r.err).localizedCaseInsensitiveContains("not found") {
-                await MainActor.run {
-                    guard self.archiveIndexKey == key else { return }
-                    self.archivedFiles = [:]
-                    self.archiveIndexLoading = false
+        let key = remote + "|" + String(status.lastSuccess?.end?.timeIntervalSince1970 ?? 0) + "|" + path
+        historyTask?.cancel()
+        let request = UUID(); historyRequest = request
+        if !force, let cached = historyCache[key] {
+            historyEntries = cached; historyLoading = false; historyError = nil
+            return
+        }
+        historyEntries = []; historyLoading = true; historyError = nil
+        historyTask = Task.detached {
+            do {
+                let folders = try await Self.fetchVersionDirs(remote)
+                var found: [ArchivedFile] = []
+                var firstError: String?
+                // Limit simultaneous SFTP requests and publish matches after every batch.
+                for start in stride(from: 0, to: folders.count, by: 8) {
+                    if Task.isCancelled { return }
+                    let batch = Array(folders[start..<min(start + 8, folders.count)])
+                    await withTaskGroup(of: (ArchivedFile?, String?).self) { group in
+                        for folder in batch {
+                            group.addTask {
+                                do {
+                                    let response = try await RcloneDaemon.shared.call("operations/stat", [
+                                        "fs": remote, "remote": folder.name + "/" + path])
+                                    guard let item = response["item"] as? [String: Any],
+                                          item["IsDir"] as? Bool == false else { return (nil, nil) }
+                                    let iso = ISO8601DateFormatter()
+                                    return (ArchivedFile(stamp: folder.name, path: path,
+                                                         size: (item["Size"] as? NSNumber)?.int64Value ?? 0,
+                                                         modified: (item["ModTime"] as? String).flatMap(iso.date(from:))), nil)
+                                } catch { return (nil, error.localizedDescription) }
+                            }
+                        }
+                        for await (entry, error) in group {
+                            if let entry { found.append(entry) }
+                            if firstError == nil { firstError = error }
+                        }
+                    }
+                    found.sort { $0.stamp > $1.stamp }
+                    let visible = found
+                    await MainActor.run {
+                        guard self.historyRequest == request else { return }
+                        self.historyEntries = visible
+                    }
                 }
-                return
-            }
-            guard r.code == 0, let data = r.out.data(using: .utf8),
-                  let rows = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+                let result = found
+                let error = firstError
                 await MainActor.run {
-                    guard self.archiveIndexKey == key else { return }
-                    self.archiveIndexError = L("Could not load version history: %@", lastErrorLine(r.err))
-                    self.archiveIndexLoading = false
-                    self.archiveIndexKey = nil
+                    guard self.historyRequest == request else { return }
+                    self.historyEntries = result
+                    self.historyLoading = false
+                    self.historyError = error.map { L("Could not load version history: %@", $0) }
+                    if error == nil {
+                        if self.historyCache.count >= 200 { self.historyCache.removeAll() }
+                        self.historyCache[key] = result
+                    }
                 }
-                return
-            }
-            var index: [String: [ArchivedFile]] = [:]
-            let iso = ISO8601DateFormatter()
-            for row in rows {
-                guard let full = row["Path"] as? String, let slash = full.firstIndex(of: "/") else { continue }
-                let stamp = String(full[..<slash])
-                guard Runner.archiveDate(stamp) != nil else { continue }
-                let path = String(full[full.index(after: slash)...])
-                guard !path.isEmpty else { continue }
-                let entry = ArchivedFile(stamp: stamp, path: path,
-                                         size: (row["Size"] as? NSNumber)?.int64Value ?? 0,
-                                         modified: (row["ModTime"] as? String).flatMap(iso.date(from:)))
-                index[path, default: []].append(entry)
-            }
-            for path in Array(index.keys) { index[path]?.sort { $0.stamp > $1.stamp } }
-            let result = index
-            await MainActor.run {
-                guard self.archiveIndexKey == key else { return }
-                self.archivedFiles = result
-                self.archiveIndexLoading = false
+            } catch {
+                await MainActor.run {
+                    guard self.historyRequest == request else { return }
+                    self.historyLoading = false
+                    self.historyError = L("Could not load version history: %@", error.localizedDescription)
+                }
             }
         }
+    }
+
+    func cancelHistory() {
+        historyTask?.cancel()
+        historyRequest = UUID()
+        historyLoading = false
     }
 
     /// Browser paths are relative to the login folder, except bookmarks rooted at an absolute path.
@@ -411,35 +456,98 @@ final class AppModel: ObservableObject {
         }
     }
 
+    private static func fetchVersionDirs(_ remote: String) async throws -> [VersionDir] {
+        let response: [String: Any]
+        do {
+            response = try await RcloneDaemon.shared.call("operations/list", ["fs": remote, "remote": ""])
+        } catch {
+            if error.localizedDescription.localizedCaseInsensitiveContains("not found") { return [] }
+            throw error
+        }
+        return (response["list"] as? [[String: Any]] ?? []).compactMap { item in
+            guard item["IsDir"] as? Bool == true, let name = item["Name"] as? String,
+                  let date = Runner.archiveDate(name) else { return nil }
+            return VersionDir(name: name, date: date)
+        }.sorted { $0.name > $1.name }
+    }
+
     func loadVersions() {
-        loadingVersions = true
+        let request = UUID(); versionsRequest = request
+        loadingVersions = true; versionsError = nil
         let remote = cfg.versionsRemote
-        Task.detached {
-            let r = rclone(["lsf", "--dirs-only", remote])
-            let list = r.out.split(separator: "\n")
-                .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: "/")) }
-                .map { VersionDir(name: $0, date: Runner.archiveDate($0)) }
-                .sorted { $0.name > $1.name }
-            await MainActor.run { self.versions = list; self.loadingVersions = false }
+        Task {
+            do {
+                let list = try await Self.fetchVersionDirs(remote)
+                guard versionsRequest == request else { return }
+                versions = list; loadingVersions = false
+            } catch {
+                guard versionsRequest == request else { return }
+                versionsError = L("Could not load version history: %@", error.localizedDescription)
+                loadingVersions = false
+            }
         }
     }
 
     func loadFiles(_ v: VersionDir) {
-        loadingFiles = true
-        versionFiles = []
+        filesTask?.cancel()
+        let request = UUID(); filesRequest = request
         let remote = "\(cfg.versionsRemote)/\(v.name)"
-        Task.detached {
-            let r = rclone(["lsjson", "-R", "--files-only", remote])
-            var files: [RemoteFile] = []
-            if let d = r.out.data(using: .utf8), let arr = try? JSONSerialization.jsonObject(with: d) as? [[String: Any]] {
-                files = arr.compactMap { o in
-                    guard let p = o["Path"] as? String else { return nil }
-                    return RemoteFile(path: p, size: (o["Size"] as? NSNumber)?.int64Value ?? 0,
-                                      modTime: String((o["ModTime"] as? String ?? "").prefix(16)).replacingOccurrences(of: "T", with: " "))
-                }.sorted { $0.path < $1.path }
+        versionFilesError = nil
+        if let cached = versionFileCache[remote] {
+            versionFiles = cached; loadingFiles = false
+            return
+        }
+        loadingFiles = true; versionFiles = []
+        filesTask = Task {
+            do {
+                var files: [RemoteFile] = []
+                try await withThrowingTaskGroup(of: [[String: Any]].self) { group in
+                    var queue = [""]
+                    var active = 0
+                    var listed = 0
+                    while !queue.isEmpty || active > 0 {
+                        try Task.checkCancellation()
+                        while active < 8 && !queue.isEmpty {
+                            let dir = queue.removeFirst()
+                            group.addTask {
+                                let response = try await RcloneDaemon.shared.call("operations/list", [
+                                    "fs": remote, "remote": dir])
+                                return response["list"] as? [[String: Any]] ?? []
+                            }
+                            active += 1
+                        }
+                        guard let rows = try await group.next() else { break }
+                        active -= 1; listed += 1
+                        for item in rows {
+                            guard let path = item["Path"] as? String else { continue }
+                            if item["IsDir"] as? Bool == true {
+                                queue.append(path)
+                            } else {
+                                let modified = String((item["ModTime"] as? String ?? "").prefix(16))
+                                    .replacingOccurrences(of: "T", with: " ")
+                                files.append(RemoteFile(path: path,
+                                                        size: (item["Size"] as? NSNumber)?.int64Value ?? 0,
+                                                        modTime: modified))
+                            }
+                        }
+                        if filesRequest == request && (listed == 1 || listed % 8 == 0) {
+                            versionFiles = files.sorted { $0.path < $1.path }
+                        }
+                    }
+                }
+                guard filesRequest == request else { return }
+                files.sort { $0.path < $1.path }
+                versionFiles = files
+                if versionFileCache.count >= 30 { versionFileCache.removeAll() }
+                versionFileCache[remote] = files
+                loadingFiles = false
+            } catch {
+                guard filesRequest == request else { return }
+                if !(error is CancellationError) {
+                    versionFilesError = L("Could not load version history: %@", error.localizedDescription)
+                }
+                loadingFiles = false
             }
-            let result = files
-            await MainActor.run { self.versionFiles = result; self.loadingFiles = false }
         }
     }
 

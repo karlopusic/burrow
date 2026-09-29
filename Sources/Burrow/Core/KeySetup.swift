@@ -1,7 +1,8 @@
 import Foundation
 
-/// One-time onboarding: create a dedicated SSH key and append it to the Storage Box's authorized_keys
-/// using the account password. The password is only held in memory and in a 0600 temp config that is
+/// One-time onboarding: create a dedicated SSH key and install it only when authorized_keys is absent.
+/// Existing key lists need a manual append because SFTP read/modify/write can discard concurrent changes.
+/// The password is only held in memory and in a 0600 temp config that is
 /// deleted immediately afterwards; scheduled backups authenticate with the key alone.
 enum KeySetup {
     struct Outcome { let ok: Bool; let message: String }
@@ -45,32 +46,47 @@ enum KeySetup {
         fm.createFile(atPath: tmpConf, contents: Data(conf.utf8), attributes: [.posixPermissions: 0o600])
         defer { try? fm.removeItem(atPath: tmpConf) }
 
-        // 4. Append (never replace) our key in .ssh/authorized_keys.
+        // 4. Create a new authorized_keys only. Never replace an existing list of keys.
         let probe = rclone(["lsf", "--max-depth", "1", "setup:"], config: tmpConf)
         guard probe.code == 0 else {
             return Outcome(ok: false, message: L("Login failed: %@", lastErrorLine(probe.err)))
         }
         rclone(["mkdir", "setup:.ssh"], config: tmpConf)
         let existing = rclone(["cat", "setup:.ssh/authorized_keys"], config: tmpConf)
-        guard let current = existingKeys(existing) else {
+        guard existingKeys(existing) != nil else {
             // Any other failure (timeout, permissions) must not be mistaken for "no keys yet": uploading
             // then would replace the file and lock the user out of every other key they had.
             return Outcome(ok: false, message: L("Could not read the existing keys on the server: %@", lastErrorLine(existing.err)))
         }
-        var keys = current
         let keyCore = pub.split(separator: " ").prefix(2).joined(separator: " ")
-        if !keys.contains(keyCore) {
-            if !keys.isEmpty && !keys.hasSuffix("\n") { keys += "\n" }
-            keys += pub + "\n"
-            let tmpKeys = Paths.support + "/authorized_keys-\(UUID().uuidString).tmp"
-            fm.createFile(atPath: tmpKeys, contents: Data(keys.utf8), attributes: [.posixPermissions: 0o600])
-            defer { try? fm.removeItem(atPath: tmpKeys) }
-            let up = rclone(["copyto", tmpKeys, "setup:.ssh/authorized_keys"], config: tmpConf)
-            guard up.code == 0 else {
-                return Outcome(ok: false, message: L("Could not upload the key: %@", lastErrorLine(up.err)))
-            }
+        if keyAction(existing: existing, publicKeyCore: keyCore) == .alreadyInstalled {
+            return Outcome(ok: true, message: L("SSH key installed. The password is no longer needed."))
+        }
+        guard keyAction(existing: existing, publicKeyCore: keyCore) == .create else {
+            return Outcome(ok: false, message: L("Append the public key from %@ to the existing .ssh/authorized_keys on the server, then check the connection.", keyFile + ".pub"))
+        }
+        let tmpKeys = Paths.support + "/authorized_keys-\(UUID().uuidString).tmp"
+        fm.createFile(atPath: tmpKeys, contents: Data((pub + "\n").utf8), attributes: [.posixPermissions: 0o600])
+        defer { try? fm.removeItem(atPath: tmpKeys) }
+        let up = rclone(["copyto", tmpKeys, "setup:.ssh/authorized_keys", "--ignore-existing"], config: tmpConf)
+        guard up.code == 0 else {
+            return Outcome(ok: false, message: L("Could not upload the key: %@", lastErrorLine(up.err)))
+        }
+        let installed = rclone(["cat", "setup:.ssh/authorized_keys"], config: tmpConf)
+        guard installed.code == 0, installed.out.contains(keyCore) else {
+            return Outcome(ok: false, message: L("The server's key file changed during setup. Check its contents and try again."))
         }
         return Outcome(ok: true, message: L("SSH key installed. The password is no longer needed."))
+    }
+
+    enum KeyAction { case alreadyInstalled, create, manual }
+    static func keyAction(existing: ShellResult, publicKeyCore: String) -> KeyAction {
+        guard let current = existingKeys(existing) else { return .manual }
+        let installed = current.split(whereSeparator: \.isNewline).contains { line in
+            line.split(whereSeparator: \.isWhitespace).prefix(2).joined(separator: " ") == publicKeyCore
+        }
+        if installed { return .alreadyInstalled }
+        return existing.code == 0 ? .manual : .create
     }
 
     /// Content of the server's authorized_keys from `rclone cat`: "" only when the file (or .ssh) doesn't exist

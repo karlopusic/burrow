@@ -17,6 +17,7 @@ enum UnitTests {
                      "run through scripts/test.sh – tests must not touch the real home folder")
         Paths.ensure()
         folderSafety()
+        trashSafety()
         archiveNames()
         schedule()
         logParsing()
@@ -62,6 +63,31 @@ enum UnitTests {
     }
 
     // MARK: version folders
+
+    static func trashSafety() {
+        func bm(_ path: String, _ trash: String) -> Bookmark {
+            var b = Bookmark(); b.path = path; b.trashFolder = trash; return b
+        }
+        let backup = ["/home/Projects", "/home/_versions"]
+        check(bm("", ".burrow-trash").trashProblem(protecting: backup) == nil, "default trash folder is fine")
+        check(bm("/", ".burrow-trash").trashProblem(protecting: []) == nil, "default trash under an absolute root start folder is fine")
+        for bad in ["", "/", ".", "./", "..", "a/../b", "~", "//"] {
+            check(bm("", bad).trashProblem(protecting: []) != nil, "trash folder '\(bad)' refused")
+        }
+        check(bm("/", "home").trashProblem(protecting: []) != nil, "/home refused as trash")
+        check(bm("", "Projects").trashProblem(protecting: backup) != nil, "trash = backup folder (relative vs absolute) refused")
+        check(bm("", "_versions/t").trashProblem(protecting: backup) != nil, "trash inside versions refused")
+        check(bm("/home", "Projects/.t").trashProblem(protecting: backup) != nil, "trash inside backup via absolute start folder refused")
+        check(bm("/home", ".t").trashProblem(protecting: backup) == nil, "sibling trash next to the backup is fine")
+        check(bm("", "P").trashProblem(protecting: ["P/sub", "V"]) != nil, "trash as parent of the backup refused")
+        check(bm("", "Px").trashProblem(protecting: ["P", "V"]) == nil, "name prefix is not nesting")
+
+        check(RPath.mayOverlap("/home/P/_v", "P"), "relative path may continue an absolute one")
+        check(RPath.mayOverlap("P", "/home/P"), "overlap check is symmetric")
+        check(!RPath.mayOverlap("/home/Backup", ".burrow-trash"), "unrelated relative and absolute paths don't overlap")
+        check(!RPath.mayOverlap("/a/b", "/a/c"), "sibling absolute paths don't overlap")
+        check(RPath.mayOverlap("/a", "/a/c"), "absolute parent overlaps")
+    }
 
     static func archiveNames() {
         check(Runner.archiveDate("2026-09-26_210005-1a2b3c4d") != nil, "new stamp parsed")
@@ -170,6 +196,15 @@ enum UnitTests {
         check(KeySetup.existingKeys((1, "", "Failed to cat: permission denied")) == nil, "permission error stops")
         check(KeySetup.existingKeys((5, "", "i/o timeout")) == nil, "timeout stops")
         check(KeySetup.existingKeys((-1, "", "launch failed")) == nil, "launch failure stops")
+        let core = "ssh-ed25519 AAA"
+        check(KeySetup.keyAction(existing: (0, "ssh-ed25519 BBB other\n", ""), publicKeyCore: core) == .manual,
+              "existing key list is never rewritten")
+        check(KeySetup.keyAction(existing: (0, "ssh-ed25519 AAA ours\n", ""), publicKeyCore: core) == .alreadyInstalled,
+              "installed key needs no write")
+        check(KeySetup.keyAction(existing: (0, "ssh-ed25519 BBB ssh-ed25519 AAA\n", ""), publicKeyCore: core) == .manual,
+              "key text inside another key's comment is not an installed key")
+        check(KeySetup.keyAction(existing: (4, "", "object not found"), publicKeyCore: core) == .create,
+              "missing key file may be created")
     }
 
     // MARK: rclone daemon
@@ -262,6 +297,12 @@ enum UnitTests {
         let n = Runner.countFiles(dir, excludes: AppConfig().excludes + Runner.builtinExcludes)
         check(n == 2, "count skips excluded and temp files (got \(n))")
         check(Runner.countFiles(dir + "/missing", excludes: []) == -1, "unreadable folder reports -1")
+        let denied = dir + "/denied"
+        try? fm.createDirectory(atPath: denied, withIntermediateDirectories: true)
+        fm.createFile(atPath: denied + "/hidden.txt", contents: Data("x".utf8))
+        _ = chmod(denied, 0o000)
+        check(Runner.countFiles(dir, excludes: []) == -1, "nested read error is not treated as a complete source")
+        _ = chmod(denied, 0o700)
         try? fm.removeItem(atPath: dir)
     }
 
@@ -304,10 +345,25 @@ enum UnitTests {
 
         try? running.replacingOccurrences(of: #""running":{"pid":\#(getpid())"#, with: #""running":{"pid":999999"#)
             .write(toFile: old + "/status.json", atomically: true, encoding: .utf8)
+        check(RenameMigration.runIfNeeded(installLocation: .diskImage) == .waitingForInstall,
+              "opening the DMG keeps the old installation and schedule")
+        check(!fm.fileExists(atPath: Paths.config) && fm.fileExists(atPath: old + "/config.json"),
+              "temporary launch makes no migration changes")
+        check(RenameMigration.runIfNeeded(activateSchedule: { _ in false }, retireOldSchedule: { true }) == .failed,
+              "failed new schedule stops migration")
+        check(!fm.fileExists(atPath: Paths.config) && fm.fileExists(atPath: old + "/config.json"),
+              "failed schedule leaves migration retryable")
+        try? "{invalid".write(toFile: old + "/status.json", atomically: true, encoding: .utf8)
+        check(RenameMigration.runIfNeeded(activateSchedule: { _ in true }, retireOldSchedule: { true }) == .failed,
+              "corrupt old history does not retire the old schedule")
+        check(!fm.fileExists(atPath: Paths.config), "failed history import remains retryable")
+        try? running.replacingOccurrences(of: #""running":{"pid":\#(getpid())"#, with: #""running":{"pid":999999"#)
+            .write(toFile: old + "/status.json", atomically: true, encoding: .utf8)
         UserDefaults(suiteName: RenameMigration.oldBundleID)?.set("hr", forKey: "test.migratedKey")
         RenameMigration.migrateDefaults()
         check(UserDefaults.standard.string(forKey: "test.migratedKey") == "hr", "preferences migrated")
-        check(RenameMigration.runIfNeeded() == .migrated, "migration runs when idle")
+        check(RenameMigration.runIfNeeded(activateSchedule: { _ in true }, retireOldSchedule: { true }) == .migrated,
+              "migration runs when idle and the new schedule is available")
         check(AppConfig.load().host == "sftp.example.com" && AppConfig.load().hour == 5, "config migrated")
         check(BookmarkStore.load().first?.trashFolder == ".sbs-trash", "bookmarks migrated unchanged")
         check(fm.fileExists(atPath: Paths.logs + "/2026-09-26_210000-1a2b3c4d.log"), "logs copied")

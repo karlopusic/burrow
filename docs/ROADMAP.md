@@ -16,7 +16,8 @@
       integration suite (`OPENSSH_KEY=… scripts/integration.sh`); CI runs the latter on every push.
 - [ ] Try a Linux VPS and a Synology/QNAP NAS before the website launch (quota display, restricted shells).
 - [x] **Onboarding flow** – a first-run assistant instead of pointing new users at Settings.
-- [x] **Stop test** – interrupted uploads leave no partial files (backup + browser, covered by `--selftest`).
+- [x] **Browser stop test** – cancelled uploads preserve unrelated remote files whose names resemble rclone partials
+      (`--selftest`). An interrupted upload may leave its own partial file for manual cleanup.
 - [x] **Host-key fingerprint confirmation** before the first connection (key setup, test, browser).
 
 ## Next

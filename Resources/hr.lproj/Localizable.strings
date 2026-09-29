@@ -31,6 +31,12 @@
 "Could not move the app: %@" = "Nije moguće premjestiti aplikaciju: %@";
 "macOS will ask once whether Burrow may read this folder. Choose “Allow” so scheduled backups can read it." = "macOS će jednom pitati smije li Burrow čitati ovu mapu. Odaberi „Allow“ da je zakazani backup može čitati.";
 "Could not read the existing keys on the server: %@" = "Nije moguće pročitati postojeće ključeve na serveru: %@";
+"Could not import the previous installation" = "Nije moguće uvesti prethodnu instalaciju";
+"The previous backup schedule was kept. Resolve the import problem before setting up a new schedule, then reopen Burrow." = "Prethodni raspored sigurnosnih kopija je zadržan. Riješite problem s uvozom prije postavljanja novog rasporeda, zatim ponovno otvorite Burrow.";
+"Append the public key from %@ to the existing .ssh/authorized_keys on the server, then check the connection." = "Dodajte javni ključ iz %@ u postojeću datoteku .ssh/authorized_keys na serveru, zatim provjerite vezu.";
+"Enter your Storage Box password once. Burrow creates a key and installs it if the box has no existing keys. Otherwise, add the shown public key manually. The password is not stored." = "Jednom unesite lozinku za Storage Box. Burrow stvara ključ i instalira ga ako na boxu nema postojećih ključeva. Inače ručno dodajte prikazani javni ključ. Lozinka se ne sprema.";
+"Enter your account password once. Burrow creates a key and installs it if the server has no existing keys. Otherwise, add the shown public key manually. The password is not stored." = "Jednom unesite lozinku računa. Burrow stvara ključ i instalira ga ako na serveru nema postojećih ključeva. Inače ručno dodajte prikazani javni ključ. Lozinka se ne sprema.";
+"The server's key file changed during setup. Check its contents and try again." = "Datoteka ključeva na serveru promijenila se tijekom postavljanja. Provjerite njezin sadržaj i pokušajte ponovno.";
 
 /* Overview */
 "Last successful backup: %@" = "Zadnji uspješan backup: %@";
@@ -409,3 +415,7 @@
 
 /* Rename to Burrow */
 "A backup started by the previous version of the app is still running. Settings will be imported automatically once it finishes – reopen this app then." = "Backup koji je pokrenula prethodna verzija aplikacije još traje. Postavke će se automatski preuzeti kad završi – tada ponovno otvori ovu aplikaciju.";
+
+/* Release safety fixes */
+"Choose a trash folder." = "Odaberi folder za smeće.";
+"The trash folder must be outside the backup and versions folders." = "Folder za smeće mora biti izvan foldera za backup i verzije.";

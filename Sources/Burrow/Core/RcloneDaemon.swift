@@ -113,6 +113,10 @@ final class RcloneDaemon: @unchecked Sendable {
         return obj
     }
 
+    /// `_config` for browser transfers and moves: an existing destination file is skipped, never overwritten, and a
+    /// move leaves its source in place. (`Immutable` does not stop copyfile/movefile from overwriting in rclone 1.75.)
+    static let noOverwrite: [String: Any] = ["IgnoreExisting": true]
+
     /// rclone errors embed the whole connection string; strip it so messages stay readable.
     static func clean(_ msg: String) -> String {
         msg.replacingOccurrences(of: #":sftp,[^:]*:"#, with: "", options: .regularExpression)

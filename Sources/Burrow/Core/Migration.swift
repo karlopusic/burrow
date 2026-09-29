@@ -20,6 +20,14 @@ enum RenameMigration {
         return fm.fileExists(atPath: oldSupport + "/config.json") && !fm.fileExists(atPath: Paths.config)
     }
 
+    static var oldBackupRunning: Bool {
+        guard let d = FileManager.default.contents(atPath: oldSupport + "/status.json"),
+              let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
+              let running = j["running"] as? [String: Any],
+              let pid = (running["pid"] as? NSNumber)?.int32Value else { return false }
+        return pidAlive(pid)
+    }
+
     /// Preferences live in the old bundle's defaults domain. Called at the very start of main(), before the UI
     /// language is applied, so a migrated language takes effect immediately.
     static func migrateDefaults() {
@@ -31,48 +39,75 @@ enum RenameMigration {
         }
     }
 
-    static func runIfNeeded() -> LegacyMigration.State {
+    static func runIfNeeded(
+        installLocation: Install.Location = Install.current,
+        activateSchedule: (AppConfig) -> Bool = Agent.install,
+        retireOldSchedule: () -> Bool = { Agent.remove(label: oldLabel, plist: oldPlist) }
+    ) -> LegacyMigration.State {
         guard isPending else { return .none }
+        guard Install.canSchedule(installLocation) else { return .waitingForInstall }
         let fm = FileManager.default
 
         // A backup started by the old app is still running – try again on a later launch.
-        if let d = fm.contents(atPath: oldSupport + "/status.json"),
-           let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
-           let running = j["running"] as? [String: Any],
-           let pid = (running["pid"] as? NSNumber)?.int32Value, pidAlive(pid) {
+        if oldBackupRunning { return .waitingForLegacyRun }
+
+        guard let configData = fm.contents(atPath: oldSupport + "/config.json"),
+              let cfg = try? JSONDecoder().decode(AppConfig.self, from: configData) else { return .failed }
+        var oldBookmarks: [Bookmark] = []
+        if fm.fileExists(atPath: oldSupport + "/bookmarks.json") {
+            guard let d = fm.contents(atPath: oldSupport + "/bookmarks.json"),
+                  let bookmarks = try? JSONDecoder().decode([Bookmark].self, from: d) else { return .failed }
+            oldBookmarks = bookmarks
+        }
+        Paths.ensure()
+        do {
+            // Copy optional files first. The config is written last so a failed import remains retryable.
+            for f in ["bookmarks.json", "transfers.json"] where fm.fileExists(atPath: oldSupport + "/" + f)
+                && !fm.fileExists(atPath: Paths.support + "/" + f) {
+                try fm.copyItem(atPath: oldSupport + "/" + f, toPath: Paths.support + "/" + f)
+            }
+            if fm.fileExists(atPath: oldLogs) {
+                for f in try fm.contentsOfDirectory(atPath: oldLogs) where !fm.fileExists(atPath: Paths.logs + "/" + f) {
+                    try fm.copyItem(atPath: oldLogs + "/" + f, toPath: Paths.logs + "/" + f)
+                }
+            }
+            // History: log paths point into the old Logs folder.
+            if fm.fileExists(atPath: oldSupport + "/status.json") {
+                guard let d = fm.contents(atPath: oldSupport + "/status.json"),
+                      var j = try JSONSerialization.jsonObject(with: d) as? [String: Any] else { return .failed }
+                j["runs"] = (j["runs"] as? [[String: Any]] ?? []).map { r -> [String: Any] in
+                    var r = r
+                    if let lf = r["logFile"] as? String { r["logFile"] = lf.replacingOccurrences(of: oldLogs, with: Paths.logs) }
+                    return r
+                }
+                j["running"] = nil
+                let out = try JSONSerialization.data(withJSONObject: j)
+                try out.write(to: URL(fileURLWithPath: Paths.status), options: .atomic)
+            }
+            // Server passwords: same bookmark IDs, new Keychain service.
+            for b in oldBookmarks where b.auth == .password && Keychain.get(b.id) == nil {
+                guard let pw = Keychain.get(b.id, service: oldBundleID + ".sftp"), Keychain.set(pw, for: b.id) else {
+                    return .failed
+                }
+            }
+            try configData.write(to: URL(fileURLWithPath: Paths.config), options: .atomic)
+        } catch { return .failed }
+        // Keep the old schedule until the new one is confirmed loaded. Roll back the config on failure
+        // so the next launch can retry the migration.
+        guard activateSchedule(cfg) else {
+            try? fm.removeItem(atPath: Paths.config)
+            return .failed
+        }
+        if oldBackupRunning {
+            Agent.remove(label: AppInfo.agentLabel, plist: Paths.agentPlist)
+            try? fm.removeItem(atPath: Paths.config)
             return .waitingForLegacyRun
         }
-
-        Paths.ensure()
-        for f in ["config.json", "bookmarks.json", "transfers.json"] where !fm.fileExists(atPath: Paths.support + "/" + f) {
-            try? fm.copyItem(atPath: oldSupport + "/" + f, toPath: Paths.support + "/" + f)
+        guard retireOldSchedule() else {
+            Agent.remove(label: AppInfo.agentLabel, plist: Paths.agentPlist)
+            try? fm.removeItem(atPath: Paths.config)
+            return .failed
         }
-        if let files = try? fm.contentsOfDirectory(atPath: oldLogs) {
-            for f in files where !fm.fileExists(atPath: Paths.logs + "/" + f) {
-                try? fm.copyItem(atPath: oldLogs + "/" + f, toPath: Paths.logs + "/" + f)
-            }
-        }
-        // History: log paths point into the old Logs folder.
-        if let d = fm.contents(atPath: oldSupport + "/status.json"),
-           var j = try? JSONSerialization.jsonObject(with: d) as? [String: Any] {
-            j["runs"] = (j["runs"] as? [[String: Any]] ?? []).map { r -> [String: Any] in
-                var r = r
-                if let lf = r["logFile"] as? String { r["logFile"] = lf.replacingOccurrences(of: oldLogs, with: Paths.logs) }
-                return r
-            }
-            j["running"] = nil
-            if let out = try? JSONSerialization.data(withJSONObject: j) {
-                try? out.write(to: URL(fileURLWithPath: Paths.status))
-            }
-        }
-        // Server passwords: same bookmark IDs, new Keychain service.
-        for b in BookmarkStore.load() where b.auth == .password {
-            if Keychain.get(b.id) == nil, let pw = Keychain.get(b.id, service: oldBundleID + ".sftp") {
-                Keychain.set(pw, for: b.id)
-            }
-        }
-        // The old schedule would keep starting the old app – no backup is running (checked above).
-        Agent.remove(label: oldLabel, plist: oldPlist)
         try? fm.moveItem(atPath: oldSupport, toPath: oldSupport + " (migrated)")
         try? fm.moveItem(atPath: oldLogs, toPath: oldLogs + " (migrated)")
         return .migrated
@@ -87,7 +122,7 @@ enum LegacyMigration {
     static let legacyLabel = "hr.push.simbackup"
     static let legacyPlist = Paths.home + "/Library/LaunchAgents/hr.push.simbackup.plist"
 
-    enum State { case none, waitingForLegacyRun, migrated }
+    enum State { case none, waitingForLegacyRun, waitingForInstall, failed, migrated }
 
     static func runIfNeeded() -> State {
         let fm = FileManager.default

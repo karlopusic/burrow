@@ -115,7 +115,8 @@ All state lives in:
 1. Open the setup assistant. Enter the SFTP host, port and username. Hetzner users can select the
    **Hetzner Storage Box** preset, which fills in its host format and port 23.
 2. Confirm the server fingerprint and choose an SSH key accepted by the server. Scheduled backups require
-   key authentication without a passphrase. The built-in key installer requires writable `~/.ssh/authorized_keys` on the server.
+   key authentication without a passphrase. The built-in installer creates `~/.ssh/authorized_keys` only when it is
+   absent. If the server already has keys, append Burrow's public key manually so existing access is preserved.
 3. Choose the local folder, a dedicated backup folder, and a separate versions folder. Save.
 4. Recommended: run **Preview changes** once, then **Back up now**.
 5. If your provider offers server-side snapshots, enable them as an independent recovery layer.
@@ -177,8 +178,8 @@ backup is blocked until you confirm it.
 
 ## License
 
-Burrow was called *StorageBox Sync* before version 0.4. Opening Burrow moves an existing installation over
-automatically (settings, history, logs, saved passwords and the schedule).
+Burrow was called *StorageBox Sync* before version 0.4. Opening Burrow from an installed location imports an
+existing installation (settings, history, logs, saved passwords and the schedule) once the old backup is idle.
 
 
 MIT © 2026 [Karlo Pušić](https://push.hr). Burrow bundles rclone, which is MIT-licensed – see

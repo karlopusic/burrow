@@ -43,7 +43,7 @@ enum SelfTest {
             print("usage: --selftest <host> <port> <user> <keyfile>"); return 2
         }
         Paths.ensure()
-        let root = "_sbs_selftest_\(Int.random(in: 1000...9999))"
+        let root = "_sbs_selftest_\(UUID().uuidString)"
         var b = Bookmark()
         b.name = "selftest"; b.host = args[0]; b.port = port; b.user = args[2]; b.keyFile = args[3]
         b.path = root
@@ -152,9 +152,15 @@ enum SelfTest {
         await waitIdle(m)
         check(!m.items.contains { $0.name == "renamed.txt" }, "move to trash removes item")
         m.openTrash(); await waitIdle(m)
-        let stampDirs = m.items.filter(\.isDir).sorted { $0.name > $1.name }
+        // dated folders carry a random suffix, so find them by content rather than by name order
+        let stampDirs = m.items.filter(\.isDir)
         check(stampDirs.count >= 2, "trash has dated folders (replace + delete)")
-        if let s = stampDirs.first {
+        func stampHolding(_ name: String) async -> RemoteItem? {
+            for s in stampDirs where await names(m, s.path).contains(name) { return s }
+            return nil
+        }
+        let deleteStamp = await stampHolding("renamed.txt"), replaceStamp = await stampHolding("report.txt")
+        if let s = deleteStamp {
             m.open(s.path); await waitIdle(m)
             let trashed = m.items.first { $0.name == "renamed.txt" }
             check(trashed != nil, "deleted item sits directly in its dated trash folder")
@@ -166,11 +172,46 @@ enum SelfTest {
 
         // put back a whole dated folder: the "Replace" step's old report.txt returns next to the new one
         m.openTrash(); await waitIdle(m)
-        if let oldest = m.items.filter(\.isDir).sorted(by: { $0.name < $1.name }).first { m.putBack([oldest]) }
+        if let s = replaceStamp { m.putBack([s]) }
         await waitIdle(m)
         let restored = try? await m.list(root)
         check(restored?.first { $0.name == "report 2.txt" }?.size == 3, "put back whole dated folder (keeps both names)")
         check((await names(m, b.trashFolder)).isEmpty, "empty dated folders are removed after put back")
+
+        // put back never deletes an item whose origin wasn't recorded
+        if let base = try? await RcloneDaemon.shared.fsBase(b) {
+            _ = try? await RcloneDaemon.shared.call("operations/copyfile", [
+                "srcFs": base, "srcRemote": root + "/report 2.txt", "dstFs": base, "dstRemote": root + "/orphan-src.txt"])
+            m.open(root); await waitIdle(m)
+            if let f = m.items.first(where: { $0.name == "orphan-src.txt" }) { m.moveToTrash([f]) }
+            await waitIdle(m)
+            m.openTrash(); await waitIdle(m)
+            let s = m.items.first(where: \.isDir)
+            if let s {
+                _ = try? await RcloneDaemon.shared.call("operations/copyfile", [
+                    "srcFs": base, "srcRemote": root + "/report 2.txt", "dstFs": base, "dstRemote": s.path + "/orphan.txt"])
+                m.putBack([s]); await waitIdle(m)
+            }
+            let restoredOrphanSrc = await names(m, root).contains("orphan-src.txt")
+            let leftInTrash = await names(m, s?.path ?? "-")
+            check(s != nil && restoredOrphanSrc && leftInTrash == ["orphan.txt"], "put back keeps an item without a recorded origin")
+        }
+
+        // two deletes at once, same name from two folders: both land in the trash, nothing is merged or overwritten
+        if let base = try? await RcloneDaemon.shared.fsBase(b) {
+            for d in ["d1", "d2"] {
+                _ = try? await RcloneDaemon.shared.call("operations/copyfile", [
+                    "srcFs": base, "srcRemote": root + "/report 2.txt", "dstFs": base, "dstRemote": root + "/\(d)/same.txt"])
+            }
+            let a = try? await m.list(root + "/d1"), c = try? await m.list(root + "/d2")
+            if let a, let c {
+                let t1 = Task { try? await m.trash(a) }, t2 = Task { try? await m.trash(c) }
+                _ = await (t1.value, t2.value)
+            }
+            let all = (try? await RcloneDaemon.shared.call("operations/list",
+                ["fs": base, "remote": b.trashFolder, "opt": ["recurse": true]])["list"] as? [[String: Any]]) ?? []
+            check(all.filter { ($0["Name"] as? String) == "same.txt" }.count == 2, "simultaneous deletes keep both items")
+        }
 
         // quick look download
         m.open(root); await waitIdle(m)
@@ -178,6 +219,14 @@ enum SelfTest {
         await waitIdle(m)
         let preview = m.quickLookURL.flatMap { try? String(contentsOf: $0, encoding: .utf8) }
         check(preview == "one-v2", "quick look downloads file")
+
+        // a queued transfer never overwrites a file that appeared after its conflict check
+        let clobber = Transfer(kind: .copy, name: "report.txt", server: b.displayName, isDir: false,
+                               srcFs: m.fs(""), srcRemote: root + "/report.txt", dstFs: m.fs(""), dstRemote: root + "/report 2.txt",
+                               destLabel: "selftest", refreshKey: nil)
+        TransferManager.shared.enqueue(clobber)
+        await waitTransfers()
+        check((try? await m.list(root))?.first { $0.name == "report 2.txt" }?.size == 3, "transfer skips an existing destination")
 
         // download folder
         let dl = local.appendingPathComponent("downloads")
@@ -207,7 +256,16 @@ enum SelfTest {
         check(staleFirst && m.items.contains { $0.name == "External" }, "background refresh picks up outside changes")
         m.open(root); await waitIdle(m)
 
-        // cancelled upload leaves no partial file
+        // Cancellation must not delete an existing remote file that resembles rclone's temp names.
+        let preexisting = local.appendingPathComponent("preexisting-partial.txt")
+        try? "keep".write(to: preexisting, atomically: true, encoding: .utf8)
+        let partialName = "big.bin.deadbeef.partial"
+        if let base = try? await RcloneDaemon.shared.fsBase(b) {
+            _ = try? await RcloneDaemon.shared.call("operations/copyfile", [
+                "srcFs": "/", "srcRemote": String(preexisting.path.dropFirst()),
+                "dstFs": base, "dstRemote": root + "/" + partialName])
+        }
+        // cancelled upload may leave its own partial file for manual recovery
         let big = local.appendingPathComponent("big.bin")
         FileManager.default.createFile(atPath: big.path, contents: Data(count: 300 * 1024 * 1024))
         m.upload([big], choose: { _ in .skip })
@@ -223,12 +281,13 @@ enum SelfTest {
         }
         try? await Task.sleep(nanoseconds: 4_000_000_000)
         let afterCancel = await names(m, root)
+        check(afterCancel.contains(partialName), "cancel preserves an existing partial-named file")
         if cancelledMidway {
-            check(!afterCancel.contains { $0.hasSuffix(".partial") } && !afterCancel.contains("big.bin"), "cancel cleans up partial upload")
+            check(!afterCancel.contains("big.bin"), "cancel does not complete the upload")
         } else {
             // Progress is polled once a second; an unthrottled local server finishes 300 MB before that.
             print("SKIP  cancel cleans up partial upload (the upload finished before it could be cancelled – server too fast)")
-            check(!afterCancel.contains { $0.hasSuffix(".partial") }, "finished upload leaves no partial file")
+            check(afterCancel.contains("big.bin"), "finished upload kept its file")
         }
 
         // empty trash

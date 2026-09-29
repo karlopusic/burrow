@@ -96,7 +96,7 @@ final class TransferManager: ObservableObject {
         let job = items[i].jobID
         items[i].state = .paused
         items[i].jobID = nil
-        if let job { stopAndClean(job, items[i]) }
+        if let job { stop(job) }
         pump()
     }
 
@@ -115,29 +115,15 @@ final class TransferManager: ObservableObject {
         items[i].state = .cancelled
         items[i].finished = Date()
         items[i].jobID = nil
-        if let job { stopAndClean(job, items[i]) }
+        if let job { stop(job) }
         save(); pump()
     }
 
-    /// Stops the job, then removes rclone's "<name>.<hex>.partial" temp files an interrupted upload leaves behind.
-    private func stopAndClean(_ job: Int, _ t: Transfer) {
+    /// An interrupted upload can leave a partial file. Its name is not proof that this job created it,
+    /// so cancellation must never delete remote files by pattern.
+    private func stop(_ job: Int) {
         Task {
             _ = try? await RcloneDaemon.shared.call("job/stop", ["jobid": job])
-            guard t.kind != .download else { return }
-            try? await Task.sleep(nanoseconds: 1_500_000_000)
-            if t.isDir {
-                _ = try? await RcloneDaemon.shared.call("operations/delete",
-                    ["fs": t.dstFs, "_filter": ["IncludeRule": [Runner.partialGlob]]])
-            } else if let remote = t.dstRemote {
-                let parent = RPath.parent(remote), name = RPath.name(remote)
-                let r = try? await RcloneDaemon.shared.call("operations/list", ["fs": t.dstFs, "remote": parent])
-                for e in (r?["list"] as? [[String: Any]] ?? []) {
-                    guard let n = e["Name"] as? String, n.hasPrefix(name + "."), n.hasSuffix(".partial"),
-                          fnmatch(Runner.partialGlob, n, 0) == 0 else { continue }
-                    _ = try? await RcloneDaemon.shared.call("operations/deletefile",
-                        ["fs": t.dstFs, "remote": RPath.join(parent, n)])
-                }
-            }
         }
     }
 
@@ -183,6 +169,7 @@ final class TransferManager: ObservableObject {
             params = ["srcFs": t.srcFs, "srcRemote": t.srcRemote ?? "", "dstFs": t.dstFs, "dstRemote": t.dstRemote ?? ""]
         }
         params["_async"] = true
+        params["_config"] = RcloneDaemon.noOverwrite   // the conflict check ran when queued; the server may have changed since
         params["_group"] = "t-\(t.id.uuidString)"
         Task {
             do {

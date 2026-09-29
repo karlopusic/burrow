@@ -23,6 +23,24 @@ struct Bookmark: Codable, Identifiable, Hashable {
     var isComplete: Bool { !host.isEmpty && !user.isEmpty && (auth == .password || !keyFile.isEmpty) }
     var usesRemoteShell: Bool { remoteShell ?? host.hasSuffix(".your-storagebox.de") }
 
+    /// Why "Delete" can't use this trash folder, or nil. Emptying the trash deletes everything in it for good,
+    /// so it must be a dedicated folder. `protected`: the backup and versions folders, when this is the backup server.
+    func trashProblem(protecting protected: [String]) -> String? {
+        let parts = trashFolder.split(separator: "/")
+        if parts.isEmpty { return L("Choose a trash folder.") }
+        // the folder "Delete" really uses: inside the start folder for absolute bookmarks (BrowserModel.trashPath)
+        let trash = path.hasPrefix("/") ? "/" + RPath.join(path, trashFolder) : RPath.join(trashFolder)
+        if trash.split(separator: "/").contains(where: { $0 == "." || $0 == ".." || $0 == "~" }) {
+            return L("Folder paths cannot contain dot or parent-directory segments.")
+        }
+        if trash == "/home" { return L("Choose a trash folder.") }
+        let others = protected.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        if others.contains(where: { RPath.mayOverlap(trash, $0) }) {
+            return L("The trash folder must be outside the backup and versions folders.")
+        }
+        return nil
+    }
+
     static func storageBox(user: String, keyFile: String) -> Bookmark {
         var b = Bookmark()
         b.name = "Storage Box"
@@ -58,16 +76,21 @@ enum Keychain {
     private static var cache: [UUID: String] = [:]
     private static let lock = NSLock()
 
-    static func set(_ password: String, for id: UUID) {
-        lock.withLock { cache[id] = password }
+    @discardableResult
+    static func set(_ password: String, for id: UUID) -> Bool {
         let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
                                 kSecAttrService as String: service,
                                 kSecAttrAccount as String: id.uuidString]
-        SecItemDelete(q as CFDictionary)
         var add = q
         add[kSecValueData as String] = Data(password.utf8)
         add[kSecAttrLabel as String] = "\(AppInfo.name) SFTP password"
-        SecItemAdd(add as CFDictionary, nil)
+        let result = SecItemAdd(add as CFDictionary, nil)
+        let status = result == errSecDuplicateItem
+            ? SecItemUpdate(q as CFDictionary, [kSecValueData as String: Data(password.utf8)] as CFDictionary)
+            : result
+        guard status == errSecSuccess else { return false }
+        lock.withLock { cache[id] = password }
+        return true
     }
 
     /// `service` other than the default is only used to migrate items saved under the app's former name.
@@ -113,6 +136,18 @@ enum RPath {
     }
     static func name(_ p: String) -> String {
         p.split(separator: "/").last.map(String.init) ?? p
+    }
+    /// Whether two server folders may be the same folder or nested. Relative paths start at the login folder, which
+    /// isn't known here: a relative path overlaps an absolute one when it could continue it below some login folder
+    /// (`/home/P/v` and `P`). A false alarm only means choosing another folder name.
+    static func mayOverlap(_ a: String, _ b: String) -> Bool {
+        let pa = a.split(separator: "/")[...], pb = b.split(separator: "/")[...]
+        func nested(_ x: ArraySlice<Substring>, _ y: ArraySlice<Substring>) -> Bool { x.starts(with: y) || y.starts(with: x) }
+        switch (a.hasPrefix("/"), b.hasPrefix("/")) {
+        case (true, false): return pa.indices.contains { nested(pa[$0...], pb) }
+        case (false, true): return pb.indices.contains { nested(pb[$0...], pa) }
+        default: return nested(pa, pb)
+        }
     }
     /// "Report.pdf" → "Report 2.pdf", "Folder" → "Folder 2", avoiding names in `taken`.
     /// Compares in NFC, so "š" typed as one character and as s + combining caron count as the same name.

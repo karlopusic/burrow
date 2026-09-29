@@ -58,10 +58,6 @@ struct BrowserView: View {
         .onChange(of: model.cwd) { _, _ in selection.removeAll() }
         .task {
             await model.connect()
-            if appModel.cfg.isBackupServer(model.bookmark) { appModel.ensureArchiveIndex() }
-        }
-        .onChange(of: appModel.status.lastSuccess?.end) { _, _ in
-            if appModel.cfg.isBackupServer(model.bookmark) { appModel.ensureArchiveIndex() }
         }
         .quickLookPreview($model.quickLookURL)
         .alert("New Folder", isPresented: $showNewFolder) {
@@ -119,9 +115,6 @@ struct BrowserView: View {
             Menu {
                 Toggle("Show Hidden Files", isOn: $model.showHidden)
                 Button("Open Trash") { model.openTrash() }
-                if appModel.cfg.isBackupServer(model.bookmark) {
-                    Button("Refresh version history") { appModel.ensureArchiveIndex(force: true) }
-                }
                 Divider()
                 Button("Paste") { model.paste() }.disabled(model.clipboard == nil)
             } label: { Image(systemName: "ellipsis.circle") }
@@ -181,9 +174,6 @@ struct BrowserView: View {
             if model.loading || model.refreshing || model.busy != nil || model.searching || model.pendingOps > 0 { ProgressView().controlSize(.small) }
             if let b = model.busy { Text(b) }
             else if model.searching { Text("Searching…") }
-            else if appModel.archiveIndexLoading && appModel.cfg.isBackupServer(model.bookmark) {
-                Text("Loading version history…")
-            }
             else if let r = model.searchResults { Text("\(r.count) results") }
             else { Text("\(model.visibleItems.count) items") }
             if !selection.isEmpty { Text("· \(selection.count) selected").foregroundStyle(.secondary) }
@@ -192,9 +182,6 @@ struct BrowserView: View {
             } else if let e = model.error, HostKeys.problem(in: e) == nil {
                 Label(e, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange).lineLimit(1)
                 Button { model.error = nil } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.borderless)
-            } else if let e = appModel.archiveIndexError, appModel.cfg.isBackupServer(model.bookmark) {
-                Label(e, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange).lineLimit(1)
-                Button("Retry") { appModel.ensureArchiveIndex(force: true) }.controlSize(.small)
             }
             Spacer()
             if let clip = model.clipboard {
@@ -242,9 +229,9 @@ struct BrowserView: View {
                 HStack(spacing: 6) {
                     Image(nsImage: item.icon).resizable().frame(width: 16, height: 16)
                     Text(model.searchResults != nil ? item.path : item.name).lineLimit(1).truncationMode(.middle)
-                    if !archiveEntries(for: item).isEmpty {
+                    if canShowHistory(for: item) {
                         Button { historyItem = item } label: { Image(systemName: "clock.arrow.circlepath") }
-                            .buttonStyle(.plain).foregroundStyle(.orange)
+                            .buttonStyle(.plain).foregroundStyle(.secondary)
                             .help("Show previous versions")
                     }
                 }
@@ -280,10 +267,10 @@ struct BrowserView: View {
                     VStack(spacing: 4) {
                         ZStack(alignment: .topTrailing) {
                             Image(nsImage: item.icon).resizable().frame(width: 56, height: 56)
-                            if !archiveEntries(for: item).isEmpty {
+                            if canShowHistory(for: item) {
                                 Button { historyItem = item } label: {
                                     Image(systemName: "clock.arrow.circlepath")
-                                        .font(.caption.weight(.semibold)).foregroundStyle(.orange)
+                                        .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                                         .padding(3).background(.regularMaterial, in: Circle())
                                 }
                                 .buttonStyle(.plain).help("Show previous versions")
@@ -322,7 +309,7 @@ struct BrowserView: View {
         } else {
             if items.count == 1, let item = items.first {
                 if item.isDir { Button("Open") { activate(item) } } else { Button("Quick Look") { activate(item) } }
-                if !archiveEntries(for: item).isEmpty {
+                if canShowHistory(for: item) {
                     Button("Show previous versions") { historyItem = item }
                 }
             }
@@ -354,9 +341,8 @@ struct BrowserView: View {
 
     // MARK: actions
 
-    private func archiveEntries(for item: RemoteItem) -> [ArchivedFile] {
-        guard !item.isDir, let path = appModel.archiveRelativePath(item.path, for: model.bookmark) else { return [] }
-        return appModel.archivedFiles[path] ?? []
+    private func canShowHistory(for item: RemoteItem) -> Bool {
+        !item.isDir && appModel.archiveRelativePath(item.path, for: model.bookmark) != nil
     }
 
     private func activate(_ item: RemoteItem) {

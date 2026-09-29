@@ -16,7 +16,11 @@ struct VersionsView: View {
                         .buttonStyle(.borderless).help("Refresh")
                 }
                 if model.loadingVersions { ProgressView().frame(maxWidth: .infinity) }
-                if model.versions.isEmpty && !model.loadingVersions {
+                if let error = model.versionsError {
+                    Label(error, systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Button("Retry") { model.loadVersions() }
+                } else if model.versions.isEmpty && !model.loadingVersions {
                     ContentUnavailableView {
                         Label("No archived versions yet", systemImage: "clock.arrow.circlepath")
                     } description: {
@@ -60,6 +64,11 @@ struct VersionsView: View {
                         .font(.caption).foregroundStyle(.secondary)
                     TextField("Search…", text: $filter).textFieldStyle(.roundedBorder)
                     if model.loadingFiles { ProgressView().frame(maxWidth: .infinity) }
+                    if let error = model.versionFilesError {
+                        Label(error, systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        Button("Retry") { model.loadFiles(v) }
+                    }
                     Table(model.versionFiles.filter { filter.isEmpty || $0.path.localizedCaseInsensitiveContains(filter) },
                           selection: $selectedFile) {
                         TableColumn("File", value: \.path)

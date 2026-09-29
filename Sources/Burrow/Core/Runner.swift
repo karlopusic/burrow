@@ -111,7 +111,6 @@ enum Runner {
         rec.uploaded = sum.uploaded; rec.archived = sum.archived; rec.modtimeFixed = sum.modtime
         rec.errors = sum.errors; rec.bytes = sum.bytes
 
-        if !dryRun && p.terminationStatus != 0 { removePartials(cfg) }
         if fm.fileExists(atPath: Paths.stopFlag) {
             try? fm.removeItem(atPath: Paths.stopFlag)
             return finish(.stopped, L("Stopped by user. The next run continues where this one left off."))
@@ -149,15 +148,25 @@ enum Runner {
     /// Regular files that rclone will consider. Returns -1 when the folder can't be read (missing TCC permission).
     static func countFiles(_ path: String, excludes: [String]) -> Int {
         let fm = FileManager.default
-        guard (try? fm.contentsOfDirectory(atPath: path)) != nil, let e = fm.enumerator(atPath: path) else { return -1 }
+        guard (try? fm.contentsOfDirectory(atPath: path)) != nil else { return -1 }
+        var readFailed = false
+        let root = URL(fileURLWithPath: path, isDirectory: true)
+        guard let e = fm.enumerator(at: root, includingPropertiesForKeys: [.isRegularFileKey, .isDirectoryKey],
+                                    errorHandler: { _, _ in readFailed = true; return false }) else { return -1 }
         let names = excludes.filter { !$0.contains("/") }
         var n = 0
-        while let rel = e.nextObject() as? String {
-            let name = (rel as NSString).lastPathComponent
-            if names.contains(where: { fnmatch($0, name, 0) == 0 }) { continue }
-            if (e.fileAttributes?[.type] as? FileAttributeType) == .typeRegular { n += 1 }
+        while let url = e.nextObject() as? URL {
+            let name = url.lastPathComponent
+            guard let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isDirectoryKey]) else {
+                readFailed = true; break
+            }
+            if names.contains(where: { fnmatch($0, name, 0) == 0 }) {
+                if values.isDirectory == true { e.skipDescendants() }
+                continue
+            }
+            if values.isRegularFile == true { n += 1 }
         }
-        return n
+        return readFailed ? -1 : n
     }
 
     /// Deletes dated version folders older than the retention window. Only folders named like a stamp are touched.
@@ -170,11 +179,6 @@ enum Runner {
             guard let d = archiveDate(name), d < cutoff else { continue }
             rclone(["purge", "\(cfg.versionsRemote)/\(name)"])
         }
-    }
-
-    /// Deletes only rclone's own interrupted-upload temp files, never user data.
-    static func removePartials(_ cfg: AppConfig) {
-        rclone(["delete", cfg.remote, "--include", partialGlob])
     }
 
     static func pruneLogs() {

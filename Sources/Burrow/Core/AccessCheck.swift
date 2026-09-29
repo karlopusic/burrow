@@ -19,7 +19,7 @@ enum AccessCheck {
     /// `Burrow --check-access`: runs under launchd, reads the configured folder, records the answer.
     static func probe() -> Int32 {
         let cfg = AppConfig.load()
-        let ok = !cfg.localPath.isEmpty && (try? FileManager.default.contentsOfDirectory(atPath: cfg.localPath)) != nil
+        let ok = !cfg.localPath.isEmpty && Runner.countFiles(cfg.localPath, excludes: cfg.excludes + Runner.builtinExcludes) >= 0
         try? (ok ? "ok" : "denied").write(toFile: resultFile, atomically: true, encoding: .utf8)
         return ok ? 0 : 1
     }

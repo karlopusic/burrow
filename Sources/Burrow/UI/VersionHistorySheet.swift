@@ -12,10 +12,7 @@ struct VersionHistorySheet: View {
     @State private var loadingPreview = false
     @State private var error: String?
 
-    private var entries: [ArchivedFile] {
-        guard let path = appModel.archiveRelativePath(item.path, for: bookmark) else { return [] }
-        return appModel.archivedFiles[path] ?? []
-    }
+    private var archivePath: String? { appModel.archiveRelativePath(item.path, for: bookmark) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -26,17 +23,24 @@ struct VersionHistorySheet: View {
                     Text("Previous versions").font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button { appModel.ensureArchiveIndex(force: true) } label: { Image(systemName: "arrow.clockwise") }
-                    .help("Refresh version history").disabled(appModel.archiveIndexLoading)
+                Button { if let archivePath { appModel.loadHistory(archivePath, force: true) } } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .help("Refresh version history").disabled(appModel.historyLoading)
             }
-            if appModel.archiveIndexLoading { ProgressView("Loading versions…") }
-            if let error = appModel.archiveIndexError {
+            if appModel.historyLoading { ProgressView("Loading versions…") }
+            if let error = appModel.historyError {
                 Label(error, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
             }
             if let error {
                 Label(error, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
             }
-            List(entries) { entry in
+            if !appModel.historyLoading && appModel.historyEntries.isEmpty && appModel.historyError == nil {
+                ContentUnavailableView {
+                    Label("No archived versions yet", systemImage: "clock.arrow.circlepath")
+                }
+            }
+            List(appModel.historyEntries) { entry in
                 HStack(spacing: 10) {
                     Image(systemName: "clock.arrow.circlepath").foregroundStyle(.orange)
                     VStack(alignment: .leading, spacing: 2) {
@@ -61,6 +65,8 @@ struct VersionHistorySheet: View {
         .padding(18)
         .frame(width: 590, height: 390)
         .quickLookPreview($previewURL)
+        .onAppear { if let archivePath { appModel.loadHistory(archivePath) } }
+        .onDisappear { appModel.cancelHistory() }
     }
 
     private func chooseDownload(_ entry: ArchivedFile) {

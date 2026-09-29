@@ -100,6 +100,10 @@ struct OverviewView: View {
             Banner(icon: "hourglass", tint: .blue, title: "Waiting for the previous app",
                    text: "A backup started by the previous version of the app is still running. Settings will be imported automatically once it finishes – reopen this app then.")
         }
+        if model.migration == .failed {
+            Banner(icon: "exclamationmark.triangle.fill", tint: .orange, title: "Could not import the previous installation",
+                   text: "The previous backup schedule was kept. Resolve the import problem before setting up a new schedule, then reopen Burrow.")
+        }
         if model.shouldOfferMove {
             Banner(icon: "arrow.down.app.fill", tint: .orange, title: "Move Burrow to Applications",
                    text: "The app is running from the disk image or a temporary location. Scheduled backups need it in the Applications folder.",

@@ -255,8 +255,8 @@ struct OnboardingView: View {
             if !hasKey {
                 VStack(alignment: .leading, spacing: 10) {
                     (isStorageBox
-                        ? Text("Enter your Storage Box password once. A dedicated key is created on this Mac and added to the box. The password is not stored.")
-                        : Text("Enter your account password once. A dedicated key is created on this Mac and added to the server. The password is not stored."))
+                        ? Text("Enter your Storage Box password once. Burrow creates a key and installs it if the box has no existing keys. Otherwise, add the shown public key manually. The password is not stored.")
+                        : Text("Enter your account password once. Burrow creates a key and installs it if the server has no existing keys. Otherwise, add the shown public key manually. The password is not stored."))
                         .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     HStack {
                         SecureField("Account password", text: $password).textFieldStyle(.roundedBorder)

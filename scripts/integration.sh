@@ -16,8 +16,8 @@ WORK="$(mktemp -d)"
 export CFFIXED_USER_HOME="$WORK/home"     # config, keys, known_hosts, logs, LaunchAgent label all separate
 export BURROW_QUIET=1                        # no notifications from test runs
 if [[ -n "${OPENSSH_KEY:-}" ]]; then
-  TEST_DIR="_burrow_it_$RANDOM"
-  SERVER_ROOT="$HOME/$TEST_DIR"           # OpenSSH logs in to the home folder
+  SERVER_ROOT="$(mktemp -d "$HOME/_burrow_it_XXXXXXXX")"  # exclusive: never reuse a user's folder
+  TEST_DIR="${SERVER_ROOT:t}"
   REMOTE_BASE="$TEST_DIR/"
 else
   SERVER_ROOT="$WORK/server"              # what the SFTP server serves as the login folder
@@ -29,8 +29,7 @@ mkdir -p "$CFFIXED_USER_HOME/.ssh" "$SERVER_ROOT" "$SRC" "$SUPPORT"
 SERVER_PID=""
 cleanup() {
   [[ -n "$SERVER_PID" ]] && kill "$SERVER_PID" 2>/dev/null || true
-  launchctl bootout "gui/$(id -u)/hr.push.burrow.dev" 2>/dev/null || true
-  [[ -n "${TEST_DIR:-}" ]] && rm -rf "$HOME/$TEST_DIR"
+  [[ -n "${TEST_DIR:-}" ]] && rm -rf -- "$SERVER_ROOT"
   rm -rf "$WORK"
 }
 trap cleanup EXIT
@@ -93,6 +92,15 @@ check "second backup succeeds" 'backup && [[ "$(last_result)" == ok ]]'
 check "changed file uploaded" '[[ "$(cat "$SERVER_ROOT/dst/a.txt")" == "version 2" ]]'
 check "old version kept in versions folder" '[[ -n "$(versions a.txt)" && "$(cat "$(versions a.txt)")" == v1 ]]'
 check "deleted file moved to versions folder" '[[ ! -e "$SERVER_ROOT/dst/sub/b.txt" && -n "$(versions b.txt)" ]]'
+
+# A failed rclone run must not remove an unrelated server file merely because its name resembles a temp file.
+echo keep > "$SERVER_ROOT/dst/manual.deadbeef.partial"
+echo unreadable > "$SRC/unreadable.txt"
+chmod 000 "$SRC/unreadable.txt"
+check "unreadable source makes backup fail" '! backup && [[ "$(last_result)" == error ]]'
+check "failed backup preserves remote partial-named file" '[[ "$(cat "$SERVER_ROOT/dst/manual.deadbeef.partial")" == keep ]]'
+chmod 600 "$SRC/unreadable.txt"
+rm "$SRC/unreadable.txt"
 
 rm "$SRC"/f{1..6}.txt
 check "safety brake blocks a large drop" '! backup && [[ "$(last_result)" == blocked ]]'

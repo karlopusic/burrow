@@ -68,6 +68,9 @@ struct BookmarkEditor: View {
                     TextField("Trash folder", text: $bookmark.trashFolder)
                     Text("“Delete” moves items into the trash folder (relative to the login folder), so they can be put back.")
                         .font(.caption).foregroundStyle(.secondary)
+                    if let p = trashProblem {
+                        Label(p, systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(.orange)
+                    }
                 }
             }
             .formStyle(.grouped)
@@ -84,13 +87,19 @@ struct BookmarkEditor: View {
                 Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
                 Button(isNew ? "Add" : "Save") { save() }
                     .keyboardShortcut(.defaultAction)
-                    .disabled(!bookmark.isComplete || (isNew && bookmark.auth == .password && password.isEmpty))
+                    .disabled(!bookmark.isComplete || trashProblem != nil
+                              || (isNew && bookmark.auth == .password && password.isEmpty))
             }
             .padding(12)
         }
         .frame(width: 520, height: 620)
         .onAppear { model.keySetupResult = nil }
         .hostKeyVerification(verifier)
+    }
+
+    private var trashProblem: String? {
+        let c = model.cfg
+        return bookmark.trashProblem(protecting: c.isBackupServer(bookmark) ? [c.remotePath, c.versionsPath] : [])
     }
 
     private func save() {

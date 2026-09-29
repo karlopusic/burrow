@@ -45,13 +45,13 @@ OPENSSH_KEY=~/.ssh/test_key scripts/integration.sh   # same, against this Mac's 
 ```
 
 For the OpenSSH run, add a dedicated test key to `~/.ssh/authorized_keys`, ideally restricted with
-`from="127.0.0.1,::1"`, and remove it afterwards. The tests work in a `_burrow_it_<n>` folder in your home folder
+`from="127.0.0.1,::1"`, and remove it afterwards. The tests create an exclusive `_burrow_it_<random>` folder in your home folder
 and delete it again. On an unthrottled local server the cancel test is reported as SKIP: a 300 MB upload
 finishes before the first progress update.
 
 Both run in CI on every push. `integration.sh` covers the browser self-test and the backup safety scenarios
-(upload, changed file → versions, deleted file → versions, preview changes nothing, safety block, "Run anyway",
-NFC names, empty source). It never touches a real server or real data.
+(upload, changed file → versions, deleted file → versions, failed run preserves unrelated remote files,
+preview changes nothing, safety block, "Run anyway", NFC names, empty source). It never touches real backup data.
 
 ## Building
 
@@ -71,8 +71,8 @@ using it. The public signing and update process is in [RELEASING.md](RELEASING.m
 
 ## Self-test (browser + transfers)
 
-Runs 33 checks against a real SFTP server inside a random `_sbs_selftest_<n>` folder that it creates and
-removes again (uploads, conflicts, rename, move, trash / put back, Quick Look, downloads, cancel cleanup):
+Runs browser and transfer checks against a disposable SFTP path inside a random `_sbs_selftest_<UUID>` folder that it
+creates and removes again (uploads, conflicts, rename, move, trash / put back, Quick Look, downloads, cancel safety):
 
 ```sh
 "build/Burrow.app/Contents/MacOS/Burrow" --selftest <host> <port> <user> <keyfile>
