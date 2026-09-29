@@ -1,5 +1,32 @@
 # Contributing
 
+## Data-safety rules
+
+Burrow writes to people's only off-site copy of their files. Every change must keep these rules:
+
+- Any remote write must be additive or go through `--backup-dir`. Never add an operation that deletes or overwrites
+  data on the server outside the versions folder.
+- Browser "Delete" goes through `BrowserModel.trash()`. Permanent deletes happen only inside the trash, after
+  confirmation.
+- The listing cache is for display only. Conflict checks before rename, move or upload use a fresh `list()`, never
+  `items` or the cache. Browser transfers and moves run with rclone's `IgnoreExisting`.
+- Names written to the server are Unicode NFC (`String.nfc`, rclone `--local-unicode-normalization`). An NFD spelling
+  of the same name is a second file on SFTP. Conflict checks compare `RPath.conflictKey` (NFC, ignoring case, because
+  macOS and Windows servers ignore case). `String ==` hides the NFC/NFD difference, so tests compare `unicodeScalars`.
+- rclone rc `operations/list` returns paths relative to the fs root (already including the listed folder), unlike
+  `rclone lsjson`.
+- `launchctl bootout` kills a running scheduled backup: reinstall the agent only when no run is active.
+- Never test against real backup data. Use a throw-away source folder and remote path (see below).
+- Every user-facing string needs an entry in `Resources/hr.lproj` and `Resources/de.lproj/Localizable.strings`.
+  No string ternaries in `Text()`.
+- The app enum is `AppInfo`. Never name a type `App` (it clashes with `SwiftUI.App`).
+- Build only with `scripts/build.sh` (`swiftc -swift-version 5`). With the Command Line Tools only, compile against
+  the macOS 26.x SDK; SDK 27 needs the SwiftUI macro plugin from full Xcode.
+- Before committing, run `scripts/test.sh`; after `scripts/build.sh`, also `scripts/integration.sh`. After touching
+  `BrowserModel`, `Transfers` or `RcloneDaemon`, run `--selftest` as well. All checks must pass.
+- Releases follow [RELEASING.md](RELEASING.md). The Sparkle private key and the code-signing key never enter the
+  repository.
+
 ## Project layout
 
 ```
