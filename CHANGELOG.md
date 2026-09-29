@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 – unreleased (first public beta)
 
 Release preparation: the app is now **Burrow**, plus security fixes, no Full Disk Access, Intel support and
 automated tests.

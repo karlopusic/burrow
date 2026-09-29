@@ -71,7 +71,7 @@ using it. The public signing and update process is in [RELEASING.md](RELEASING.m
 
 ## Self-test (browser + transfers)
 
-Runs browser and transfer checks against a disposable SFTP path inside a random `_sbs_selftest_<UUID>` folder that it
+Runs browser and transfer checks against a disposable SFTP path inside a random `_burrow_selftest_<UUID>` folder that it
 creates and removes again (uploads, conflicts, rename, move, trash / put back, Quick Look, downloads, cancel safety):
 
 ```sh
@@ -83,7 +83,7 @@ Run it before every commit that touches `BrowserModel`, `Transfers` or `RcloneDa
 ## Testing a backup change safely
 
 Never point a development build at real data first. Create a throw-away source folder and a throw-away
-remote path (e.g. `/home/_sbs_test/dst` and `/home/_sbs_test/_versions`), then run the binary directly:
+remote path (e.g. `/home/_burrow_test/dst` and `/home/_burrow_test/_versions`), then run the binary directly:
 
 ```sh
 "build/Burrow.app/Contents/MacOS/Burrow" --dry-run
@@ -102,7 +102,7 @@ The LaunchAgent of a real installation may point at `build/`, and a launched bui
 look at UI changes without touching real settings or the real schedule, start the binary with a throw-away home:
 
 ```sh
-CFFIXED_USER_HOME=/tmp/sbs-home "build/Burrow.app/Contents/MacOS/Burrow"
+CFFIXED_USER_HOME=/tmp/burrow-home "build/Burrow.app/Contents/MacOS/Burrow"
 launchctl bootout gui/$(id -u)/hr.push.burrow.dev   # afterwards
 ```
 

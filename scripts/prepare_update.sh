@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Prepare a signed appcast entry after a Developer ID + notarized DMG is built.
+# Prepare a signed appcast entry after a release DMG is built (Developer ID + notarized, or the self-signed identity).
 # Publish the DMG under v<VERSION>, then commit appcast.xml so installed apps can see it.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -10,7 +10,15 @@ SPARKLE_DIR=".build/vendor/Sparkle-2.10.0"
 STAGE=".build/update-feed-$VERSION"
 [[ -f "$DMG" ]] || { echo "Missing $DMG"; exit 1; }
 [[ -x "$SPARKLE_DIR/bin/generate_appcast" ]] || { echo "Run scripts/build.sh first"; exit 1; }
-xcrun stapler validate "$DMG" >/dev/null
+if ! xcrun stapler validate "$DMG" >/dev/null 2>&1; then
+  # Not notarized: allowed for the self-signed identity, never for an ad-hoc development build.
+  MNT="$(mktemp -d)"
+  hdiutil attach -nobrowse -readonly -mountpoint "$MNT" "$DMG" >/dev/null
+  SIG="$(codesign -dv "$MNT/Burrow.app" 2>&1 || true)"
+  hdiutil detach "$MNT" >/dev/null
+  if [[ "$SIG" != *"Authority="* ]]; then echo "$DMG is ad-hoc signed. Build with SIGN_ID (see RELEASING.md)."; exit 1; fi
+  echo "Note: $DMG is not notarized; users confirm it once with Open Anyway."
+fi
 mkdir -p "$STAGE"
 cp "$DMG" "$STAGE/"
 # The EdDSA key keeps the Keychain name from before the rename to Burrow; it matches SUPublicEDKey.

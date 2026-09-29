@@ -5,7 +5,7 @@ import Foundation
 ///
 ///   Burrow --selftest <host> <port> <user> <keyfile>
 ///
-/// Uses `_sbs_selftest_<random>` in the login folder; nothing else on the server is touched.
+/// Uses `_burrow_selftest_<random>` in the login folder; nothing else on the server is touched.
 @MainActor
 enum SelfTest {
     static var failures = 0
@@ -43,7 +43,7 @@ enum SelfTest {
             print("usage: --selftest <host> <port> <user> <keyfile>"); return 2
         }
         Paths.ensure()
-        let root = "_sbs_selftest_\(UUID().uuidString)"
+        let root = "_burrow_selftest_\(UUID().uuidString)"
         var b = Bookmark()
         b.name = "selftest"; b.host = args[0]; b.port = port; b.user = args[2]; b.keyFile = args[3]
         b.path = root
@@ -51,7 +51,7 @@ enum SelfTest {
         defer { UserDefaults.standard.removeObject(forKey: "lastPath.\(b.id.uuidString)") }   // shared with the real app
 
         // local fixtures
-        let local = FileManager.default.temporaryDirectory.appendingPathComponent("sbs-selftest-\(UUID().uuidString)")
+        let local = FileManager.default.temporaryDirectory.appendingPathComponent("burrow-selftest-\(UUID().uuidString)")
         let dir = local.appendingPathComponent("Folder A")
         try? FileManager.default.createDirectory(at: dir.appendingPathComponent("Sub"), withIntermediateDirectories: true)
         try? "one".write(to: local.appendingPathComponent("report.txt"), atomically: true, encoding: .utf8)

@@ -178,7 +178,7 @@ enum UnitTests {
     // MARK: rclone log
 
     static func tempFile(_ text: String) -> String {
-        let p = NSTemporaryDirectory() + "sbs-test-\(UUID().uuidString).log"
+        let p = NSTemporaryDirectory() + "burrow-test-\(UUID().uuidString).log"
         try? text.write(toFile: p, atomically: true, encoding: .utf8)
         return p
     }
@@ -339,7 +339,7 @@ enum UnitTests {
     // MARK: file count
 
     static func fileCounting() {
-        let dir = NSTemporaryDirectory() + "sbs-count-\(UUID().uuidString)"
+        let dir = NSTemporaryDirectory() + "burrow-count-\(UUID().uuidString)"
         let fm = FileManager.default
         try? fm.createDirectory(atPath: dir + "/sub", withIntermediateDirectories: true)
         for f in ["a.txt", "sub/b.txt", ".DS_Store", "sub/._c", "doc.idlk", "~$report.docx", "x.1a2b3c4d.partial"] {
