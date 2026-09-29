@@ -16,6 +16,10 @@
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
+> **Beta.** 0.4 is the first public release. It is tested against OpenSSH, Hetzner Storage Box and rclone's SFTP
+> server. Read [What Burrow is – and isn't](#what-burrow-is--and-isnt) before you rely on it, and keep a second,
+> independent copy of anything you can't afford to lose.
+
 ---
 
 ## Why
@@ -51,12 +55,14 @@ questions that matter: *When was my last good backup? What changed? Can I get th
 ### Backup
 
 - **Scheduled backups** via a LaunchAgent – daily or weekly, runs even when the app is closed, catches
-  up after sleep.
+  up after sleep and, after a shutdown, at the next login.
 - **Version history** – files you change or delete locally are moved into a dated archive folder on the
   box instead of being overwritten. Old versions are pruned after a configurable retention period.
 - **Safety brakes**
   - blocks a run if the local file count suddenly drops (unmounted drive, accidental delete, ransomware)
     until you confirm it,
+  - blocks the first run after a folder change (or on a new Mac) if the local folder has far fewer files than
+    the backup folder on the server,
   - caps how many files a single run may archive,
   - refuses to run on an empty or unreadable source folder.
 - **Preview changes** – a dry-run that lists exactly what would be uploaded and what would be archived.
@@ -82,7 +88,7 @@ Backups:
 
 ```
 ~/Desktop/Projects  ──rclone sync──▶  box:/home/Projects            (exact mirror)
-                                   └▶ box:/home/_versions/2026-09-26_2100/…
+                                   └▶ box:/home/_versions/2026-09-26_210005-1a2b3c4d/…
                                         (previous copies of changed + deleted files)
 ```
 
@@ -105,7 +111,8 @@ All state lives in:
    **Applications**. If you open it straight from the disk image, the app offers to move itself there, because
    scheduled backups need a permanent location.
 2. Open it. If macOS says it can't check the app for malicious software, open
-   System Settings → Privacy & Security and click **Open Anyway** (only needed once).
+   System Settings → Privacy & Security, scroll down and click **Open Anyway** (only needed once). On macOS 15 and
+   later, right-click → Open no longer skips this step.
 3. When you choose a folder in Desktop, Documents, Downloads, iCloud Drive or on an external drive, macOS asks once
    whether Burrow may read it. Click **Allow**. The app checks this the same way a scheduled backup
    reads the folder, so you know it works before the first night. Full Disk Access is not needed.
@@ -123,6 +130,48 @@ All state lives in:
 
 The first backup of an existing remote copy can take a while. Servers with SSH shell access can use
 server-side checksums; otherwise rclone compares file size and modification time.
+
+## What Burrow is – and isn't
+
+**A mirror with a version window, not an archive.** The backup folder on the server always matches your local
+folder. A file you change or delete on the Mac is moved to the versions folder on the next run and **deleted for
+good after the retention period** (90 days by default, Backup Settings → Versions & safety). If you need to keep
+something longer, keep it in the local folder.
+
+**Not protection against someone who controls your Mac.** Scheduled backups log in with an SSH key that has no
+passphrase and full access to the server account. Malware, or anyone using your Mac account, can use that key to
+delete the backup and its versions. The safety brake stops a mass deletion on the Mac from reaching the server, but
+files that ransomware encrypts in place look like ordinary edits: they're uploaded, and the good copies stay in the
+versions folder only for the retention period. For protection that the Mac can't undo, turn on **server-side
+snapshots**: automatic snapshots of a Hetzner Storage Box, ZFS or Btrfs snapshots on a NAS or your own server, or
+whatever your provider offers.
+
+**What isn't backed up:**
+
+- symbolic links (rclone skips them), extended attributes, Finder tags and comments, and file permissions;
+- system files: `.DS_Store`, `._*`, `.Spotlight-V100`, `.Trashes`, `.fseventsd`, `.TemporaryItems`;
+- lock files of open documents (`~$*`, `*.idlk`, `.~lock.*#`) and rclone's partial uploads;
+- files that only exist in iCloud (iCloud Drive with "Optimize Mac Storage"). This hasn't been tested yet; to be
+  safe, right-click the backed-up folder in Finder and choose **Keep Downloaded**.
+
+A file that is being written while a backup runs can fail to upload; it's picked up on the next run.
+
+## Restoring everything on a new Mac
+
+The backup is a plain copy of your files, so any SFTP client (Cyberduck, `scp`, `rclone`) can download it. With
+Burrow:
+
+1. Install Burrow and add your server under **Servers** (a new SSH key can be installed with the account password,
+   see [Setting up an SFTP server](#setting-up-an-sftp-server)).
+2. In the file browser, right-click the backup folder → **Download to…** and choose where it should live, for example
+   your Desktop. Wait until the transfer has finished. Older versions of files are in the versions folder.
+3. Finish the backup setup and choose the **downloaded folder** as the local folder and the same server folder as
+   before. The assistant warns that the server folder isn't empty; here that's expected. The first run then finds
+   nothing to upload.
+
+**Never point an empty or nearly empty local folder at an existing backup.** The backup folder would be made to
+match it: everything else there would be moved to the versions folder and deleted after the retention period.
+Burrow blocks such a first run and asks for **Run anyway**. Only confirm it if that is really what you want.
 
 ## Build from source
 

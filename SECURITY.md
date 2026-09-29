@@ -25,3 +25,17 @@ Only the latest release receives security fixes. The app updates itself (Sparkle
 - Backups never delete or overwrite files on the server outside the versions folder: changed and deleted files are
   moved there (`rclone sync --backup-dir`).
 - Updates are verified with an EdDSA signature (Sparkle) before they're installed.
+- The file browser never overwrites server files: transfers and moves run with rclone's `--ignore-existing`, and
+  permanent deletion happens only inside the configured trash folder, after confirmation.
+- rclone's log (`~/Library/Logs/Burrow/rcd.log`) doesn't contain connection strings or passwords: rclone 1.75
+  replaces them with a short hash.
+
+## What Burrow does not protect against
+
+- **Someone who controls your Mac account.** The SSH key used for scheduled backups has no passphrase, so that
+  scheduled runs can use it, and it has full access to the server account. Malware running as you can use it to
+  delete the backup and its versions. Use server-side snapshots that the account can't remove.
+- **Ransomware that encrypts files in place.** Encrypted files are uploaded as new versions. The previous copies
+  stay in the versions folder only for the retention period.
+- **A compromised server.** Files are stored unencrypted on the server. If you need encryption at rest, use a tool
+  such as restic or Borg instead.
